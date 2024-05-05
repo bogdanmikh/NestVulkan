@@ -16,7 +16,7 @@ function(configureTarget TARGET_NAME)
     target_include_directories(${TARGET_NAME} PUBLIC Vendor/imgui)
 
     # vulkan
-    target_link_libraries(${TARGET_NAME} vulkan)
+    target_link_libraries(${TARGET_NAME} Vulkan::Vulkan)
     target_include_directories(${TARGET_NAME} PUBLIC Vendor/vulkan/include)
 
     # spdlog

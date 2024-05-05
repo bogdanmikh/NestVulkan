@@ -6,8 +6,8 @@ project(Vulkan)
 
 find_package(Vulkan REQUIRED)
 
-if(${Vulkan_VERSION} VERSION_LESS "1.2.000" )
-    message( FATAL_ERROR "Minimum required Vulkan version for C++ modules is 1.2.000. "
+if (${Vulkan_VERSION} VERSION_LESS "1.1.000" )
+    message( FATAL_ERROR "Minimum required Vulkan version for C++ modules is 1.1.000. "
             "Found ${Vulkan_VERSION}."
     )
 endif()

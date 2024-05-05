@@ -9,8 +9,8 @@
 
 struct GlobalSettings {
     enum GraphicsAPI {
-        OpenGL = 0,
-        Vulkan = 1
+        OpenGL,
+        Vulkan
     };
     GlobalSettings()
         : appName("GLFW Window")
@@ -54,7 +54,6 @@ public:
     }
 private:
     Application();
-
     static Application *s_instance;
     Window* window;
     Level *currentLevel;

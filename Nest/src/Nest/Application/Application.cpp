@@ -28,6 +28,7 @@ Application::Application() {
 
 Application::~Application() {
     delete window;
+    delete renderer;
 }
 
 void Application::init(const GlobalSettings& globalSettings) {
@@ -35,6 +36,9 @@ void Application::init(const GlobalSettings& globalSettings) {
     window->init(globalSettings.appName.c_str(), globalSettings.resolutionX,
                  globalSettings.resolutionY, globalSettings.fullScreen);
     if (globalSettings.api == GlobalSettings::Vulkan) {
+        if (!glfwVulkanSupported()) {
+            LOG_ERROR("GLFW NOT SUPPORT VULKAN!");
+        }
         renderer = new Vulkan;
         renderer->init(globalSettings.debugMode, globalSettings.appName.c_str());
     } else if (globalSettings.api == GlobalSettings::OpenGL) {

@@ -1,7 +1,6 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 #include <vector>
-#include <set>
 
 #include "Nest/Renderer/Vulkan/Vulkan.hpp"
 #include "Nest/Logger/Logger.hpp"
@@ -18,6 +17,7 @@ Vulkan::~Vulkan() {
 
 void Vulkan::init(bool debug, const char* appName) {
     makeInstance(debug, appName);
+    glfwInitVulkanLoader(vkGetInstanceProcAddr);
     dld = DispatchLoaderDynamic(vulkanInstance, vkGetInstanceProcAddr);
     if (debug) {
         makeDebugMessenger();
@@ -123,15 +123,15 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
                  VK_API_VERSION_PATCH(version));
     }
     // patch = 0
-    version &= ~(0xFFFU);
+//    version &= ~(0xFFFU);
+    version = VK_API_VERSION_1_1;
 
-    ApplicationInfo appInfo = ApplicationInfo(
-            appName,
-            version,
-            "Nest",
-            version,
-            version
-    );
+    ApplicationInfo appInfo;
+    appInfo.pApplicationName = appName;
+    appInfo.applicationVersion = version;
+    appInfo.pEngineName = "Nest";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 1, 0);
+    appInfo.apiVersion = version;
 
     uint32_t glfwExtensionCount = 0;
     const char **glfwExtension;
@@ -143,6 +143,7 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
         // add extension utils for debug
         extensions.push_back("VK_EXT_debug_utils");
     }
+    extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
     if (debug) {
         std::string message = "Extension to be requested\n";
@@ -172,17 +173,19 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
         return;
     }
 
-    InstanceCreateInfo createInfo = InstanceCreateInfo(
-            InstanceCreateFlags(),
-            &appInfo,
-            static_cast<uint32_t>(layers.size()), layers.data(), // enable layers
-            static_cast<uint32_t>(extensions.size()), extensions.data() // enable extensions
-    );
+    InstanceCreateInfo createInfo;
+    createInfo.flags = InstanceCreateFlags() | InstanceCreateFlagBits::eEnumeratePortabilityKHR;
+    createInfo.pApplicationInfo = &appInfo;
+    createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
+    createInfo.ppEnabledLayerNames = layers.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
+
     try {
         vulkanInstance = createInstance(createInfo);
-    } catch (SystemError err) {
+    } catch (const SystemError &err) {
         if (debug) {
-            LOG_ERROR("Failed to create vulkan Instance!");
+            LOG_ERROR("Failed to create vulkan Instance! {}", err.what());
         }
         vulkanInstance = nullptr;
     }
@@ -206,13 +209,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 }
 
 void Vulkan::makeDebugMessenger() {
-    DebugUtilsMessengerCreateInfoEXT createInfo = DebugUtilsMessengerCreateInfoEXT(
-            DebugUtilsMessengerCreateFlagsEXT(),
-            DebugUtilsMessageSeverityFlagBitsEXT::eWarning | DebugUtilsMessageSeverityFlagBitsEXT::eError,
-            DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation | DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-            debugCallback,
-            nullptr
-    );
+    DebugUtilsMessengerCreateInfoEXT createInfo;
+    createInfo.flags = DebugUtilsMessengerCreateFlagsEXT();
+    createInfo.messageSeverity = DebugUtilsMessageSeverityFlagBitsEXT::eWarning | DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    createInfo.messageType = DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation | DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+    createInfo.pfnUserCallback = &debugCallback;
+    createInfo.pUserData = nullptr;
     debugMessenger = vulkanInstance.createDebugUtilsMessengerEXT(createInfo, nullptr, dld);
 }
 

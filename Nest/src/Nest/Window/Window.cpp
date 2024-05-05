@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <cstring>
 
 #include "Nest/Window/Window.hpp"
@@ -18,7 +16,6 @@ void Window::init(const char *name, int resolutionX, int resolutionY, bool fullS
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
-
     GLFWwindow *window = glfwCreateWindow(resolutionX, resolutionY, name, NULL, NULL);
     if (!window) {
         LOG_ERROR("GLFW window creation failed\n");

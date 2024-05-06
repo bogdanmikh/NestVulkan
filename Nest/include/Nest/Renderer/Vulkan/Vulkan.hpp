@@ -14,7 +14,7 @@ public:
     ~Vulkan();
     void init(bool debug, const char* appName) override;
 private:
-    bool supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug);
+    static bool supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug);
     void makeInstance(bool debug, const char *appName);
     void makeDebugMessenger();
 

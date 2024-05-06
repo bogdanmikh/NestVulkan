@@ -1,27 +1,26 @@
 function(configureTarget TARGET_NAME)
     # GLFW
     target_link_libraries(${TARGET_NAME} glfw)
-    target_include_directories(${TARGET_NAME} PUBLIC Vendor/glfw/include)
+    target_include_directories(${TARGET_NAME} PUBLIC ${VENDOR_DIRECTORY}/glfw/include)
 
     # GLM
     target_link_libraries(${TARGET_NAME} glm)
-    target_include_directories(${TARGET_NAME} PUBLIC Vendor/glm)
+    target_include_directories(${TARGET_NAME} PUBLIC ${VENDOR_DIRECTORY}/glm)
 
     # STB_IMAGE
     target_link_libraries(${TARGET_NAME} stb_image)
-    target_include_directories(${TARGET_NAME} PUBLIC Vendor/stb_image)
+    target_include_directories(${TARGET_NAME} PUBLIC ${VENDOR_DIRECTORY}/stb_image)
 
     # imgui
     target_link_libraries(${TARGET_NAME} imgui)
-    target_include_directories(${TARGET_NAME} PUBLIC Vendor/imgui)
+    target_include_directories(${TARGET_NAME} PUBLIC ${VENDOR_DIRECTORY}/imgui)
 
     # vulkan
     target_link_libraries(${TARGET_NAME} Vulkan::Vulkan)
-    target_include_directories(${TARGET_NAME} PUBLIC Vendor/vulkan/include)
 
     # spdlog
     target_link_libraries(${TARGET_NAME} spdlog)
-    target_include_directories(${TARGET_NAME} PUBLIC Vendor/spdlog)
+    target_include_directories(${TARGET_NAME} PUBLIC ${VENDOR_DIRECTORY}/spdlog)
 
     # allocator
 endfunction()

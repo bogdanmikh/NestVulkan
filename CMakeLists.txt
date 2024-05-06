@@ -12,6 +12,8 @@ if (${Vulkan_VERSION} VERSION_LESS "1.1.000" )
     )
 endif()
 
+set(VENDOR_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Vendor)
+
 add_subdirectory(Vendor/glfw)
 add_subdirectory(Vendor/glad)
 add_subdirectory(Vendor/glm)

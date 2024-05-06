@@ -17,8 +17,12 @@ void Window::init(const char *name, int resolutionX, int resolutionY, bool fullS
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
     GLFWwindow *window = glfwCreateWindow(resolutionX, resolutionY, name, NULL, NULL);
+
+    // set min size
+    glfwSetWindowSizeLimits(window, 800, 600, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
     if (!window) {
-        LOG_ERROR("GLFW window creation failed\n");
+        LOG_CRITICAL("GLFW window creation failed\n");
         glfwTerminate();
     }
     glfwMakeContextCurrent(window);

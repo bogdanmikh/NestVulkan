@@ -4,9 +4,20 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <optional>
+
 #include "Nest/Logger/Logger.hpp"
 
 using namespace vk;
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+
+    bool isComplete() const {
+        return graphicsFamily.has_value() && presentFamily.has_value();
+    }
+};
 
 static void logDeviceProperties(const PhysicalDevice &device) {
     /*
@@ -96,4 +107,33 @@ bool isSuitable(const PhysicalDevice &device, bool debug) {
         }
         return false;
     }
+}
+
+QueueFamilyIndices& findQueueFamilies(const PhysicalDevice& physicalDevice, bool debug) {
+    QueueFamilyIndices indices;
+
+    std::vector<QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
+
+    std::string message;
+    if (debug) {
+        message += "System can support " + std::to_string(queueFamilies.size()) + " queue families";
+    }
+    int i = 0;
+    for (const auto &queueFamily: queueFamilies) {
+        if (queueFamily.queueFlags & QueueFlagBits::eGraphics) {
+            indices.graphicsFamily = i;
+            indices.presentFamily = i;
+        }
+        if (indices.isComplete()) {
+            if (debug) {
+                message += "\n\tQueue Family " + std::to_string(i) + " is suitable for graphics and presenting";
+            }
+            break;
+        }
+        i++;
+    }
+    if (debug) {
+        LOG_INFO("{}", message);
+    }
+    return indices;
 }

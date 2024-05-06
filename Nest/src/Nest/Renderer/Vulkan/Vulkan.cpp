@@ -123,8 +123,7 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
                  VK_API_VERSION_PATCH(version));
     }
     // patch = 0
-//    version &= ~(0xFFFU);
-    version = VK_API_VERSION_1_1;
+    version &= ~(0xFFFU);
 
     ApplicationInfo appInfo;
     appInfo.pApplicationName = appName;
@@ -141,7 +140,7 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
     std::vector<const char*> extensions(glfwExtension, glfwExtension + glfwExtensionCount);
     if (debug) {
         // add extension utils for debug
-        extensions.push_back("VK_EXT_debug_utils");
+        extensions.emplace_back("VK_EXT_debug_utils");
     }
     extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
@@ -195,8 +194,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData
-) {
+        void* pUserData) {
     std::string message = "Validation layer: ";
     message += pCallbackData->pMessage;
     if (messageType == VK_DEBUG_REPORT_WARNING_BIT_EXT) {
@@ -234,6 +232,7 @@ void Vulkan::makeDevice(bool debug) {
         }
         if (isSuitable(device, debug)) {
             physicalDevice = device;
+            findQueueFamilies(device, debug);
             return;
         }
     }

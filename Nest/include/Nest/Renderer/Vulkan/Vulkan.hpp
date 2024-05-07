@@ -8,10 +8,10 @@
 
 using namespace vk;
 
-class Vulkan : public Renderer {
+class Vulkan final : public Renderer {
 public:
     Vulkan();
-    ~Vulkan();
+    ~Vulkan() override;
     void init(bool debug, const char* appName) override;
 private:
     static bool supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug);
@@ -21,11 +21,15 @@ private:
     void makeDevice(bool debug);
 
     // vulkan instance
-    Instance vulkanInstance;
+    Instance instance;
     // debug messenger
     DebugUtilsMessengerEXT debugMessenger;
     // dynamic instance dispatcher
     DispatchLoaderDynamic dld;
     // physical device(GPU)
     PhysicalDevice physicalDevice;
+    // abstract physical device
+    Device logicalDevice;
+    // queue
+    Queue graphicsQueue;
 };

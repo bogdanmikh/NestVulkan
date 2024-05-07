@@ -8,17 +8,23 @@
 
 using namespace vk;
 
-Vulkan::Vulkan() : debugMessenger(nullptr) {}
+Vulkan::Vulkan()
+    : instance(nullptr)
+    , debugMessenger(nullptr)
+    , logicalDevice(nullptr)
+    , physicalDevice(nullptr)
+    , graphicsQueue(nullptr) {}
 
 Vulkan::~Vulkan() {
-    vulkanInstance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dld);
-    vulkanInstance.destroy();
+    instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dld);
+    logicalDevice.destroy();
+    instance.destroy();
 }
 
 void Vulkan::init(bool debug, const char* appName) {
     makeInstance(debug, appName);
     glfwInitVulkanLoader(vkGetInstanceProcAddr);
-    dld = DispatchLoaderDynamic(vulkanInstance, vkGetInstanceProcAddr);
+    dld = DispatchLoaderDynamic(instance, vkGetInstanceProcAddr);
     if (debug) {
         makeDebugMessenger();
     }
@@ -168,7 +174,7 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
         if (debug) {
             LOG_ERROR("Device not supported need extensions");
         }
-        vulkanInstance = nullptr;
+        instance = nullptr;
         return;
     }
 
@@ -181,12 +187,12 @@ void Vulkan::makeInstance(bool debug, const char *appName) {
     createInfo.ppEnabledExtensionNames = extensions.data();
 
     try {
-        vulkanInstance = createInstance(createInfo);
+        instance = createInstance(createInfo);
     } catch (const SystemError &err) {
         if (debug) {
             LOG_ERROR("Failed to create vulkan Instance! {}", err.what());
         }
-        vulkanInstance = nullptr;
+        instance = nullptr;
     }
 }
 
@@ -213,14 +219,14 @@ void Vulkan::makeDebugMessenger() {
     createInfo.messageType = DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation | DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     createInfo.pfnUserCallback = &debugCallback;
     createInfo.pUserData = nullptr;
-    debugMessenger = vulkanInstance.createDebugUtilsMessengerEXT(createInfo, nullptr, dld);
+    debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dld);
 }
 
 void Vulkan::makeDevice(bool debug) {
     if (debug) {
         LOG_INFO("Choosing physical device...");
     }
-    std::vector<PhysicalDevice> availableDevices = vulkanInstance.enumeratePhysicalDevices();
+    std::vector<PhysicalDevice> availableDevices = instance.enumeratePhysicalDevices();
 
     if (debug) {
         std::string message = "There are: " + std::to_string(availableDevices.size()) + " physical devices available on the system";
@@ -232,8 +238,11 @@ void Vulkan::makeDevice(bool debug) {
         }
         if (isSuitable(device, debug)) {
             physicalDevice = device;
-            findQueueFamilies(device, debug);
+            logicalDevice = createLogicalDevice(physicalDevice, debug);
+            graphicsQueue = getQueue(physicalDevice, logicalDevice, debug);
             return;
         }
     }
 }
+
+

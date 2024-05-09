@@ -5,6 +5,7 @@
 #include <set>
 #include <string>
 #include <optional>
+#include <array>
 
 #include "Nest/Logger/Logger.hpp"
 
@@ -12,16 +13,17 @@ using namespace vk;
 
 struct QueueFamilyIndices;
 
-extern void logDeviceProperties(const PhysicalDevice &device);
+namespace DeviceInit {
+    void logDeviceProperties(const PhysicalDevice &device);
 
-extern bool
-checkDeviceExtensionSupport(const PhysicalDevice &device, const std::vector<const char *> &requestedExtensions,
-                            bool debug);
+    bool checkDeviceExtensionSupport(const PhysicalDevice &device, const std::vector<const char *> &requestedExtensions,
+                                bool debug);
 
-extern bool isSuitable(const PhysicalDevice &device, bool debug);
+    bool isSuitable(const PhysicalDevice &device, bool debug);
 
-extern QueueFamilyIndices findQueueFamilies(const PhysicalDevice &physicalDevice, bool debug);
+    QueueFamilyIndices findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR& surface, bool debug);
 
-extern Device createLogicalDevice(const PhysicalDevice &physicalDevice, bool debug);
+    Device createLogicalDevice(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
 
-extern Queue getQueue(const PhysicalDevice &physicalDevice, const Device &device, bool debug);
+    std::array<Queue, 2> getQueues(const PhysicalDevice &physicalDevice, const Device &device, const SurfaceKHR &surface, bool debug);
+}

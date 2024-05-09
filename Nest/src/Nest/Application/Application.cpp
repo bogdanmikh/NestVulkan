@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cassert>
 
 #include "Nest/Application/Application.hpp"
 #include "Nest/Logger/Logger.hpp"
@@ -8,23 +9,7 @@ using namespace vk;
 
 std::shared_ptr<spdlog::logger> Logger::s_logger = nullptr;
 
-Application::Application() {
-    Logger::init();
-    LOG_INFO("Application Start!");
-    std::string message = {"\n       |-- \\\n"
-                           "       |     \\\n"
-                           "       |     /\n"
-                           "       |-- /\n"
-                           "       |\n"
-                           "  \\    |    /\n"
-                           "    \\  |  /\n"
-                           " α    \\|/    Ω\n"
-                           "      /|\\\n"
-                           "    /  |  \\\n"
-                           "  /    |    \\\n"
-                           "   HOC VINCE"};
-    LOG_INFO(message);
-}
+Application::Application() : debugMode(true) {}
 
 Application::~Application() {
     delete window;
@@ -32,17 +17,38 @@ Application::~Application() {
 }
 
 void Application::init(const GlobalSettings& globalSettings) {
+    debugMode = globalSettings.debugMode;
+    if (debugMode) {
+        Logger::init();
+        LOG_INFO("Application Start!");
+        std::string message = {"\n       |-- \\\n"
+                               "       |     \\\n"
+                               "       |     /\n"
+                               "       |-- /\n"
+                               "       |\n"
+                               "  \\    |    /\n"
+                               "    \\  |  /\n"
+                               " α    \\|/    Ω\n"
+                               "      /|\\\n"
+                               "    /  |  \\\n"
+                               "  /    |    \\\n"
+                               "   HOC VINCE"};
+        LOG_INFO(message);
+    }
     window = new Window;
     window->init(globalSettings.appName.c_str(), globalSettings.resolutionX,
                  globalSettings.resolutionY, globalSettings.fullScreen);
     if (globalSettings.api == GlobalSettings::Vulkan) {
         if (!glfwVulkanSupported()) {
-            LOG_ERROR("GLFW NOT SUPPORT VULKAN!");
+            if (debugMode) {
+                LOG_ERROR("GLFW NOT SUPPORT VULKAN!");
+            }
+            return;
         }
         renderer = new Vulkan;
-        renderer->init(globalSettings.debugMode, globalSettings.appName.c_str());
+        renderer->init(debugMode, globalSettings.appName.c_str());
     } else if (globalSettings.api == GlobalSettings::OpenGL) {
-        LOG_WARN("OpenGL not supported now");
+        LOG_ERROR("OpenGL not supported now");
     }
 }
 
@@ -53,16 +59,24 @@ uint64_t getMillis() {
 
 void Application::loop() {
     if (!window) {
-        LOG_ERROR("Window NOT INIT!");
+        if (debugMode) {
+            LOG_ERROR("Window NOT INIT!");
+        }
         return;
     }
     if (!currentLevel) {
-        LOG_ERROR("Level IS NULL");
+        if (debugMode) {
+            LOG_ERROR("Level IS NULL");
+        }
         return;
     }
     if (!renderer) {
-        LOG_WARN("Renderer not init!");
+        if (debugMode) {
+            LOG_ERROR("Renderer not init!");
+        }
+        return;
     }
+
     while (!window->shouldClose()) {
         uint64_t lastTime = timeMillis;
         timeMillis = getMillis();
@@ -75,7 +89,9 @@ void Application::loop() {
         thisSecondFramesCount++;
         if (oneSecondTimeCount >= 1000) {
             fps = thisSecondFramesCount;
-            LOG_INFO("FPS: {}", fps);
+            if (debugMode) {
+                LOG_INFO("FPS: {}", fps);
+            }
             thisSecondFramesCount = 0;
             oneSecondTimeCount = 0;
         }

@@ -5,9 +5,11 @@
 
 void Window::init(const char *name, int resolutionX, int resolutionY, bool fullScreen) {
     if (glfwInit() != GLFW_TRUE) {
-        LOG_ERROR("GLFW initialization failed\n");
+        LOG_ERROR("GLFW initialization failed");
         return;
     }
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+//    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     if (fullScreen) glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 #if defined(__APPLE__) || defined(__MACH__)
@@ -22,7 +24,7 @@ void Window::init(const char *name, int resolutionX, int resolutionY, bool fullS
     glfwSetWindowSizeLimits(window, 800, 600, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
     if (!window) {
-        LOG_CRITICAL("GLFW window creation failed\n");
+        LOG_CRITICAL("GLFW window creation failed");
         glfwTerminate();
     }
     glfwMakeContextCurrent(window);

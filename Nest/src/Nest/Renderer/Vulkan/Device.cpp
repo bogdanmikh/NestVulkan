@@ -9,7 +9,7 @@ struct QueueFamilyIndices {
     }
 };
 
-void logDeviceProperties(const PhysicalDevice &device) {
+void DeviceInit::logDeviceProperties(const PhysicalDevice &device) {
     PhysicalDeviceProperties properties = device.getProperties();
 
     std::string message = "\n\tDevice name: " + std::string(properties.deviceName) + "\n";
@@ -40,7 +40,7 @@ void logDeviceProperties(const PhysicalDevice &device) {
     LOG_INFO("{}", message);
 }
 
-bool checkDeviceExtensionSupport(const vk::PhysicalDevice& device, const std::vector<const char*>& requestedExtensions, bool debug) {
+bool DeviceInit::checkDeviceExtensionSupport(const vk::PhysicalDevice& device, const std::vector<const char*>& requestedExtensions, bool debug) {
 //    Check if a given physical device can satisfy a list of requested device extensions.
     std::set<std::string> requiredExtensions(requestedExtensions.begin(), requestedExtensions.end());
 
@@ -61,7 +61,7 @@ bool checkDeviceExtensionSupport(const vk::PhysicalDevice& device, const std::ve
     return requiredExtensions.empty();
 }
 
-bool isSuitable(const PhysicalDevice &device, bool debug) {
+bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
     std::string message;
     message += "Checking if device is suitable";
     const std::vector<const char*> requestedExtensions = {
@@ -91,7 +91,7 @@ bool isSuitable(const PhysicalDevice &device, bool debug) {
     }
 }
 
-QueueFamilyIndices findQueueFamilies(const PhysicalDevice& physicalDevice, bool debug) {
+QueueFamilyIndices DeviceInit::findQueueFamilies(const PhysicalDevice& physicalDevice, const SurfaceKHR& surface, bool debug) {
     QueueFamilyIndices indices;
     std::vector<QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
 
@@ -103,11 +103,18 @@ QueueFamilyIndices findQueueFamilies(const PhysicalDevice& physicalDevice, bool 
     for (const auto &queueFamily: queueFamilies) {
         if (queueFamily.queueFlags & QueueFlagBits::eGraphics) {
             indices.graphicsFamily = i;
-            indices.presentFamily = i;
             if (debug) {
-                message += "\n\tQueue Family " + std::to_string(i) + " is suitable for graphics and presenting";
+                message += "\n\tQueue Family " + std::to_string(i) + " is suitable for graphics";
             }
         }
+
+        if (physicalDevice.getSurfaceSupportKHR(i, surface)) {
+            indices.presentFamily = i;
+            if (debug) {
+                message += "\n\tQueue Family " + std::to_string(i) + " is suitable for presenting";
+            }
+        }
+
         if (indices.isComplete()) {
             break;
         }
@@ -119,14 +126,26 @@ QueueFamilyIndices findQueueFamilies(const PhysicalDevice& physicalDevice, bool 
     return indices;
 }
 
-Device createLogicalDevice(const PhysicalDevice &physicalDevice, bool debug) {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, debug);
+Device DeviceInit::createLogicalDevice(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface, debug);
+    std::vector<uint32_t> uniqueIndices;
+    uniqueIndices.emplace_back(indices.graphicsFamily.value());
+    if (indices.graphicsFamily.value() != indices.presentFamily.value()) {
+        uniqueIndices.emplace_back(indices.presentFamily.value());
+    }
+
     float queuePriority = 1.0f;
-    DeviceQueueCreateInfo queueCreateInfo;
-    queueCreateInfo.flags = DeviceQueueCreateFlags();
-    queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-    queueCreateInfo.queueCount = 1;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
+
+
+    std::vector<DeviceQueueCreateInfo> queueCreateInfo;
+    for (auto &queueFamilyIndex: uniqueIndices) {
+        DeviceQueueCreateInfo createInfo;
+        createInfo.flags = DeviceQueueCreateFlags();
+        createInfo.queueCount = 1;
+        createInfo.queueFamilyIndex = queueFamilyIndex;
+        createInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfo.emplace_back(createInfo);
+    }
 
     PhysicalDeviceFeatures deviceFeatures;
 
@@ -137,8 +156,8 @@ Device createLogicalDevice(const PhysicalDevice &physicalDevice, bool debug) {
 
     DeviceCreateInfo deviceInfo;
     deviceInfo.flags = DeviceCreateFlags();
-    deviceInfo.queueCreateInfoCount = 1;
-    deviceInfo.pQueueCreateInfos = &queueCreateInfo;
+    deviceInfo.queueCreateInfoCount = queueCreateInfo.size();
+    deviceInfo.pQueueCreateInfos = queueCreateInfo.data();
     deviceInfo.enabledLayerCount = enabledLayers.size();
     deviceInfo.ppEnabledLayerNames = enabledLayers.data();
     deviceInfo.enabledExtensionCount = 0;
@@ -159,8 +178,11 @@ Device createLogicalDevice(const PhysicalDevice &physicalDevice, bool debug) {
     }
 }
 
-Queue getQueue(const PhysicalDevice& physicalDevice, const Device& device, bool debug) {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, debug);
+std::array<Queue, 2> DeviceInit::getQueues(const PhysicalDevice &physicalDevice, const Device &device, const SurfaceKHR &surface, bool debug) {
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface, debug);
 
-    return device.getQueue(indices.graphicsFamily.value(), 0);
+    return {
+        device.getQueue(indices.graphicsFamily.value(), 0),
+        device.getQueue(indices.presentFamily.value(), 0)
+    };
 }

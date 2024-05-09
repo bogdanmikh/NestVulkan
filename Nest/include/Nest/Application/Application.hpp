@@ -59,6 +59,8 @@ private:
     Level *currentLevel;
     Renderer *renderer;
 
+    bool debugMode;
+
     int fps;
     int maximumFps = 60;
     uint64_t deltaTimeMillis = 0;

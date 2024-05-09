@@ -1,10 +1,13 @@
 #include <vulkan/vulkan.hpp>
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vector>
 
-#include "Nest/Renderer/Vulkan/Vulkan.hpp"
+#include "Nest/Application/Application.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Renderer/Vulkan/Vulkan.hpp"
 #include "Nest/Renderer/Vulkan/Device.hpp"
+#include "Nest/Renderer/Vulkan/Instance.hpp"
 
 using namespace vk;
 
@@ -13,187 +16,42 @@ Vulkan::Vulkan()
     , debugMessenger(nullptr)
     , logicalDevice(nullptr)
     , physicalDevice(nullptr)
-    , graphicsQueue(nullptr) {}
+    , graphicsQueue(nullptr)
+    , presentQueue(nullptr)
+    , debugMode(true) {}
 
 Vulkan::~Vulkan() {
-    instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dld);
     logicalDevice.destroy();
+    instance.destroySurfaceKHR(surface);
+    if (debugMode) {
+        instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dld);
+    }
     instance.destroy();
 }
 
 void Vulkan::init(bool debug, const char* appName) {
-    makeInstance(debug, appName);
-    glfwInitVulkanLoader(vkGetInstanceProcAddr);
+    debugMode = debug;
+    makeInstance(appName);
+    makeDevice();
+}
+
+void Vulkan::makeInstance(const char *appName) {
+    instance = VulkanInit::makeInstance(appName, debugMode);
     dld = DispatchLoaderDynamic(instance, vkGetInstanceProcAddr);
-    if (debug) {
-        makeDebugMessenger();
+    if (debugMode) {
+        debugMessenger = VulkanInit::makeDebugMessenger(instance, dld);
     }
-    makeDevice(debug);
-}
-
-bool Vulkan::supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug) {
-    std::vector<ExtensionProperties> supportedExtensions = enumerateInstanceExtensionProperties();
-
-    if (debug) {
-        // functions that Vulkan supports
-        std::string message = "Device can support the following extensions:\n";
-        for (auto &supportedExtension: supportedExtensions) {
-            message += "\t";
-            message += static_cast<std::string>(supportedExtension.extensionName);
-            if (supportedExtension != supportedExtensions.back()) {
-                message += "\n";
-            }
+    VkSurfaceKHR cStyleSurface;
+    auto* window = static_cast<GLFWwindow*>(Application::getInstance()->getWindow()->getNativeHandle());
+    VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &cStyleSurface);
+    if (result != VK_SUCCESS) {
+        if (debugMode) {
+            LOG_CRITICAL("Failed to abstract the glfw surface for Vulkan");
         }
-        LOG_INFO("{}", message);
+    } else if (debugMode) {
+        LOG_INFO("Successfully abstracted glfw surface for Vulkan");
     }
-
-    std::string message;
-    for (const auto &extension : needExtensions) {
-        bool canSupport = false;
-        for (const auto &supportedExtension: supportedExtensions) {
-            if (strcmp(extension, supportedExtension.extensionName) == 0) {
-                canSupport = true;
-                if (debug) {
-                    message += "\n\tExtension \"";
-                    message += static_cast<std::string>(supportedExtension.extensionName);
-                    message += "\" is supported";
-                }
-                break;
-            }
-        }
-        if (!canSupport) {
-            if (debug) {
-                message += "\n\tExtension \"";
-                message += static_cast<std::string>(extension);
-                message += "\" is not supported";
-            }
-            LOG_INFO("{}", message);
-            return false;
-        }
-    }
-    if (debug) {
-        LOG_INFO("{}", message);
-    }
-    message.clear();
-
-    // check device can support layers
-    std::vector<LayerProperties> supportedLayers = enumerateInstanceLayerProperties();
-    if (debug) {
-        message += "Device can support the following layers";
-        for (const auto &supportedLayer: supportedLayers) {
-            message += "\n\t";
-            message += static_cast<std::string>(supportedLayer.layerName);
-        }
-        LOG_INFO("{}", message);
-    }
-    message.clear();
-    for (const auto &layer: layers) {
-        bool canSupport = false;
-        for (const auto &supportedLayer: supportedLayers) {
-            if (strcmp(layer, supportedLayer.layerName) == 0) {
-                canSupport = true;
-                if (debug) {
-                    message += "\n\tExtension \"";
-                    message += static_cast<std::string>(supportedLayer.layerName);
-                    message += "\" is supported";
-                }
-                break;
-            }
-        }
-        if (!canSupport) {
-            if (debug) {
-                message += "\n\tExtension \"";
-                message += static_cast<std::string>(layer);
-                message += "\" is not supported";
-                LOG_INFO("{}", message);
-            }
-            return false;
-        }
-    }
-    if (debug) {
-        LOG_INFO("{}", message);
-    }
-
-    return true;
-}
-
-void Vulkan::makeInstance(bool debug, const char *appName) {
-    if (debug) {
-        LOG_INFO("Make instance...");
-    }
-    uint32_t version;
-    vkEnumerateInstanceVersion(&version);
-    if (debug) {
-        LOG_INFO("System can support vulkan version: {}. {}.{}.{}",
-                 VK_API_VERSION_VARIANT(version), VK_API_VERSION_MAJOR(version), VK_API_VERSION_MINOR(version),
-                 VK_API_VERSION_PATCH(version));
-    }
-    // patch = 0
-    version &= ~(0xFFFU);
-
-    ApplicationInfo appInfo;
-    appInfo.pApplicationName = appName;
-    appInfo.applicationVersion = version;
-    appInfo.pEngineName = "Nest";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 1, 0);
-    appInfo.apiVersion = version;
-
-    uint32_t glfwExtensionCount = 0;
-    const char **glfwExtension;
-    // the necessary extensions that GLFW needs to work with Vulkan
-    glfwExtension = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    std::vector<const char*> extensions(glfwExtension, glfwExtension + glfwExtensionCount);
-    if (debug) {
-        // add extension utils for debug
-        extensions.emplace_back("VK_EXT_debug_utils");
-    }
-    extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-
-    if (debug) {
-        std::string message = "Extension to be requested\n";
-
-        for (int i = 0; i < extensions.size() - 1; ++i) {
-            message += "\t";
-            message += extensions[i];
-            message += "\n";
-        }
-        message += "\t";
-        message += extensions.back();
-
-        LOG_INFO("{}", message);
-    }
-
-    std::vector<const char*> layers;
-    if (debug) {
-        layers.push_back("VK_LAYER_KHRONOS_validation");
-    }
-
-    // check can support GLFW this device for Vulkan
-    if (!supported(extensions, layers, debug)) {
-        if (debug) {
-            LOG_ERROR("Device not supported need extensions");
-        }
-        instance = nullptr;
-        return;
-    }
-
-    InstanceCreateInfo createInfo;
-    createInfo.flags = InstanceCreateFlags() | InstanceCreateFlagBits::eEnumeratePortabilityKHR;
-    createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
-    createInfo.ppEnabledLayerNames = layers.data();
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-    createInfo.ppEnabledExtensionNames = extensions.data();
-
-    try {
-        instance = createInstance(createInfo);
-    } catch (const SystemError &err) {
-        if (debug) {
-            LOG_ERROR("Failed to create vulkan Instance! {}", err.what());
-        }
-        instance = nullptr;
-    }
+    surface = cStyleSurface;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -211,38 +69,27 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
     return VK_FALSE;
 }
-
-void Vulkan::makeDebugMessenger() {
-    DebugUtilsMessengerCreateInfoEXT createInfo;
-    createInfo.flags = DebugUtilsMessengerCreateFlagsEXT();
-    createInfo.messageSeverity = DebugUtilsMessageSeverityFlagBitsEXT::eWarning | DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    createInfo.messageType = DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation | DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-    createInfo.pfnUserCallback = &debugCallback;
-    createInfo.pUserData = nullptr;
-    debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dld);
-}
-
-void Vulkan::makeDevice(bool debug) {
-    if (debug) {
+void Vulkan::makeDevice() {
+    if (debugMode) {
         LOG_INFO("Choosing physical device...");
     }
     std::vector<PhysicalDevice> availableDevices = instance.enumeratePhysicalDevices();
 
-    if (debug) {
+    if (debugMode) {
         std::string message = "There are: " + std::to_string(availableDevices.size()) + " physical devices available on the system";
         LOG_INFO("{}", message);
     }
     for (const auto &device: availableDevices) {
-        if (debug) {
-            logDeviceProperties(device);
+        if (debugMode) {
+            DeviceInit::logDeviceProperties(device);
         }
-        if (isSuitable(device, debug)) {
+        if (DeviceInit::isSuitable(device, debugMode)) {
             physicalDevice = device;
-            logicalDevice = createLogicalDevice(physicalDevice, debug);
-            graphicsQueue = getQueue(physicalDevice, logicalDevice, debug);
+            logicalDevice = DeviceInit::createLogicalDevice(physicalDevice, surface, debugMode);
+            auto queue = DeviceInit::getQueues(physicalDevice, logicalDevice, surface, debugMode);
+            graphicsQueue = queue[0];
+            presentQueue = queue[1];
             return;
         }
     }
 }
-
-

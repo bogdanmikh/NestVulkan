@@ -14,22 +14,20 @@ public:
     ~Vulkan() override;
     void init(bool debug, const char* appName) override;
 private:
-    static bool supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug);
-    void makeInstance(bool debug, const char *appName);
-    void makeDebugMessenger();
+    void makeInstance(const char *appName);
+    void makeDevice();
 
-    void makeDevice(bool debug);
+    bool debugMode;
 
-    // vulkan instance
+    //instance-related variables
     Instance instance;
-    // debug messenger
     DebugUtilsMessengerEXT debugMessenger;
-    // dynamic instance dispatcher
     DispatchLoaderDynamic dld;
-    // physical device(GPU)
+    SurfaceKHR surface;
+
+    //device-related variables
     PhysicalDevice physicalDevice;
-    // abstract physical device
     Device logicalDevice;
-    // queue
     Queue graphicsQueue;
+    Queue presentQueue;
 };

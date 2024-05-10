@@ -27,15 +27,15 @@ void DeviceInit::logDeviceProperties(const PhysicalDevice &device) {
             message += "\n\tOther";
     }
     // get size memory for device
-    PhysicalDeviceMemoryProperties memoryProperties = device.getMemoryProperties();
-    for (int i = 0; i < memoryProperties.memoryTypeCount; ++i) {
-        MemoryType memoryType = memoryProperties.memoryTypes[i];
-        MemoryPropertyFlags propertyFlag = memoryType.propertyFlags;
-        if (propertyFlag & MemoryPropertyFlagBits::eDeviceLocal) {
-            DeviceSize heapSize = memoryProperties.memoryHeaps[memoryType.heapIndex].size;
-            message += "\n\tHeap size for device local memory: " + std::to_string(heapSize / (1024 * 1024)) + " MB";
-        }
-    }
+//    PhysicalDeviceMemoryProperties memoryProperties = device.getMemoryProperties();
+//    for (int i = 0; i < memoryProperties.memoryTypeCount; ++i) {
+//        MemoryType memoryType = memoryProperties.memoryTypes[i];
+//        MemoryPropertyFlags propertyFlag = memoryType.propertyFlags;
+//        if (propertyFlag & MemoryPropertyFlagBits::eDeviceLocal) {
+//            DeviceSize heapSize = memoryProperties.memoryHeaps[memoryType.heapIndex].size;
+//            message += "\n\tHeap size for device local memory: " + std::to_string(heapSize / (1024 * 1024)) + " MB";
+//        }
+//    }
 
     LOG_INFO("{}", message);
 }
@@ -154,14 +154,17 @@ Device DeviceInit::createLogicalDevice(const PhysicalDevice &physicalDevice, con
         enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
     }
 
+    std::vector<const char*> extensions;
+    extensions.emplace_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+
     DeviceCreateInfo deviceInfo;
     deviceInfo.flags = DeviceCreateFlags();
     deviceInfo.queueCreateInfoCount = queueCreateInfo.size();
     deviceInfo.pQueueCreateInfos = queueCreateInfo.data();
     deviceInfo.enabledLayerCount = enabledLayers.size();
     deviceInfo.ppEnabledLayerNames = enabledLayers.data();
-    deviceInfo.enabledExtensionCount = 0;
-    deviceInfo.ppEnabledExtensionNames = nullptr;
+    deviceInfo.enabledExtensionCount = extensions.size();
+    deviceInfo.ppEnabledExtensionNames = extensions.data();
     deviceInfo.pEnabledFeatures = &deviceFeatures;
 
     try {

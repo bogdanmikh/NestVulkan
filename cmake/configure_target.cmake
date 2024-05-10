@@ -1,4 +1,5 @@
 function(configureTarget TARGET_NAME)
+    target_compile_definitions(${TARGET_NAME} PRIVATE VK_ENABLE_BETA_EXTENSIONS)
     # GLFW
     target_link_libraries(${TARGET_NAME} glfw)
     target_include_directories(${TARGET_NAME} PUBLIC ${VENDOR_DIRECTORY}/glfw/include)

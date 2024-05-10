@@ -85,7 +85,6 @@ bool VulkanInit::supported(std::vector<const char*> &needExtensions, std::vector
     if (debug) {
         LOG_INFO("{}", message);
     }
-
     return true;
 }
 

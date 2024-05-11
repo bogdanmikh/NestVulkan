@@ -1,54 +1,54 @@
 #include <vulkan/vulkan.hpp>
+
 #define GLFW_INCLUDE_VULKAN
+
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <set>
 
 #include "Nest/Application/Application.hpp"
 #include "Nest/Logger/Logger.hpp"
 #include "Nest/Renderer/Vulkan/Vulkan.hpp"
 #include "Nest/Renderer/Vulkan/Device.hpp"
 #include "Nest/Renderer/Vulkan/Instance.hpp"
+#include "Nest/Renderer/Vulkan/Logging.hpp"
 
 using namespace vk;
 
 Vulkan::Vulkan()
-    : instance(nullptr)
-    , debugMessenger(nullptr)
-    , logicalDevice(nullptr)
-    , physicalDevice(nullptr)
-    , graphicsQueue(nullptr)
-    , presentQueue(nullptr)
-    , debugMode(true) {}
+        : instance(nullptr), debugMessenger(nullptr), logicalDevice(nullptr), physicalDevice(nullptr),
+          graphicsQueue(nullptr), presentQueue(nullptr) {}
 
 Vulkan::~Vulkan() {
+    logicalDevice.destroySwapchainKHR(swapchain);
     logicalDevice.destroy();
     instance.destroySurfaceKHR(surface);
-    if (debugMode) {
+    if (m_globalSettings.debugMode) {
         instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dld);
     }
     instance.destroy();
 }
 
-void Vulkan::init(bool debug, const char* appName) {
-    debugMode = debug;
-    makeInstance(appName);
+void Vulkan::init(const GlobalSettings &globalSettings) {
+    m_globalSettings = globalSettings;
+    makeInstance();
     makeDevice();
 }
 
-void Vulkan::makeInstance(const char *appName) {
-    instance = VulkanInit::makeInstance(appName, debugMode);
+void Vulkan::makeInstance() {
+    instance = VulkanInit::makeInstance(m_globalSettings.appName.c_str(), m_globalSettings.debugMode);
     dld = DispatchLoaderDynamic(instance, vkGetInstanceProcAddr);
-    if (debugMode) {
-        debugMessenger = VulkanInit::makeDebugMessenger(instance, dld);
+    if (m_globalSettings.debugMode) {
+        debugMessenger = VulkanLogging::makeDebugMessenger(instance, dld);
     }
     VkSurfaceKHR cStyleSurface;
-    auto* window = static_cast<GLFWwindow*>(Application::getInstance()->getWindow()->getNativeHandle());
+    auto *window = static_cast<GLFWwindow *>(Application::getInstance()->getWindow()->getNativeHandle());
     VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &cStyleSurface);
     if (result != VK_SUCCESS) {
-        if (debugMode) {
+        if (m_globalSettings.debugMode) {
             LOG_CRITICAL("Failed to abstract the glfw surface for Vulkan");
         }
-    } else if (debugMode) {
+    } else if (m_globalSettings.debugMode) {
         LOG_INFO("Successfully abstracted glfw surface for Vulkan");
     }
     surface = cStyleSurface;
@@ -57,39 +57,59 @@ void Vulkan::makeInstance(const char *appName) {
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData) {
-    std::string message = "Validation layer: ";
-    message += pCallbackData->pMessage;
+        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+        void *pUserData) {
+    std::ostringstream stringStream;
+    stringStream << "Validation layer: ";
+    stringStream << pCallbackData->pMessage;
     if (messageType == VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        LOG_WARN("{}", message);
+        LOG_WARN("{}", stringStream.str());
     } else {
-        LOG_ERROR("{}", message);
+        LOG_ERROR("{}", stringStream.str());
     }
 
     return VK_FALSE;
 }
+
 void Vulkan::makeDevice() {
-    if (debugMode) {
+    if (m_globalSettings.debugMode) {
         LOG_INFO("Choosing physical device...");
     }
     std::vector<PhysicalDevice> availableDevices = instance.enumeratePhysicalDevices();
 
-    if (debugMode) {
-        std::string message = "There are: " + std::to_string(availableDevices.size()) + " physical devices available on the system";
-        LOG_INFO("{}", message);
+    if (m_globalSettings.debugMode) {
+        std::ostringstream stringStream;
+        stringStream << "There are: " << availableDevices.size() << " physical devices available on the system";
+        LOG_INFO("{}", stringStream.str());
     }
+
+    std::vector<std::array<bool, 5>> devicesTypes;
     for (const auto &device: availableDevices) {
-        if (debugMode) {
-            DeviceInit::logDeviceProperties(device);
-        }
-        if (DeviceInit::isSuitable(device, debugMode)) {
-            physicalDevice = device;
-            logicalDevice = DeviceInit::createLogicalDevice(physicalDevice, surface, debugMode);
-            auto queue = DeviceInit::getQueues(physicalDevice, logicalDevice, surface, debugMode);
-            graphicsQueue = queue[0];
-            presentQueue = queue[1];
-            return;
+        devicesTypes.emplace_back(VulkanInit::getDeviceProperties(device));
+    }
+
+    for (int numType = 0; numType < 5; ++numType) {
+        for (int numDevice = 0; numDevice < availableDevices.size(); ++numDevice) {
+            if (devicesTypes[numDevice][numType] &&
+                VulkanInit::isSuitable(availableDevices[numDevice], m_globalSettings.debugMode)) {
+                if (m_globalSettings.debugMode) {
+                    VulkanLogging::logDeviceProperties(availableDevices[numDevice], devicesTypes[numDevice]);
+                }
+                physicalDevice = availableDevices[numDevice];
+                logicalDevice = VulkanInit::createLogicalDevice(physicalDevice, surface, m_globalSettings.debugMode);
+                auto queue = VulkanInit::getQueues(physicalDevice, logicalDevice, surface, m_globalSettings.debugMode);
+                graphicsQueue = queue[0];
+                presentQueue = queue[1];
+                SwapChainBundle bundle = VulkanInit::createSwapchain(logicalDevice, physicalDevice, surface,
+                                                                     m_globalSettings.resolutionX,
+                                                                     m_globalSettings.resolutionY,
+                                                                     m_globalSettings.debugMode);
+                swapchain = bundle.swapchain;
+                swapchainImages = bundle.images;
+                swapchainFormat = bundle.format;
+                swapchainExtent = bundle.extent;
+                return;
+            }
         }
     }
 }

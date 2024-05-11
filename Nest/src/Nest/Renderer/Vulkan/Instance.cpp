@@ -8,82 +8,70 @@ bool VulkanInit::supported(std::vector<const char*> &needExtensions, std::vector
 
     if (debug) {
         // functions that Vulkan supports
-        std::string message = "Device can support the following extensions:\n";
+        std::ostringstream stringStream;
+        stringStream << "Device can support the following extensions:";
         for (auto &supportedExtension: supportedExtensions) {
-            message += "\t";
-            message += static_cast<std::string>(supportedExtension.extensionName);
-            if (supportedExtension != supportedExtensions.back()) {
-                message += "\n";
-            }
+            stringStream << "\n\t" << static_cast<std::string>(supportedExtension.extensionName);
         }
-        LOG_INFO("{}", message);
+        LOG_INFO("{}", stringStream.str());
     }
 
-    std::string message;
+    std::ostringstream stringStream;
     for (const auto &extension : needExtensions) {
         bool canSupport = false;
         for (const auto &supportedExtension: supportedExtensions) {
             if (strcmp(extension, supportedExtension.extensionName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    message += "\n\tExtension \"";
-                    message += static_cast<std::string>(supportedExtension.extensionName);
-                    message += "\" is supported";
+                    stringStream << "\n\tExtension \"" << static_cast<std::string>(supportedExtension.extensionName) << "\" is supported";
                 }
                 break;
             }
         }
         if (!canSupport) {
             if (debug) {
-                message += "\n\tExtension \"";
-                message += static_cast<std::string>(extension);
-                message += "\" is not supported";
+                stringStream << "\n\tExtension \"" << static_cast<std::string>(extension) << "\" is not supported";
             }
-            LOG_INFO("{}", message);
+            LOG_INFO("{}", stringStream.str());
             return false;
         }
     }
     if (debug) {
-        LOG_INFO("{}", message);
+        LOG_INFO("{}", stringStream.str());
     }
-    message.clear();
+    stringStream.clear();
 
     // check device can support layers
     std::vector<LayerProperties> supportedLayers = enumerateInstanceLayerProperties();
     if (debug) {
-        message += "Device can support the following layers";
+        stringStream << "\n\tDevice can support the following layers";
         for (const auto &supportedLayer: supportedLayers) {
-            message += "\n\t";
-            message += static_cast<std::string>(supportedLayer.layerName);
+            stringStream << "\n\t" << static_cast<std::string>(supportedLayer.layerName);
         }
-        LOG_INFO("{}", message);
+        LOG_INFO("{}", stringStream.str());
     }
-    message.clear();
+    stringStream.str().clear();
     for (const auto &layer: layers) {
         bool canSupport = false;
         for (const auto &supportedLayer: supportedLayers) {
             if (strcmp(layer, supportedLayer.layerName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    message += "\n\tExtension \"";
-                    message += static_cast<std::string>(supportedLayer.layerName);
-                    message += "\" is supported";
+                    stringStream << "\n\tExtension \"" << static_cast<std::string>(supportedLayer.layerName) << "\" is supported";
                 }
                 break;
             }
         }
         if (!canSupport) {
             if (debug) {
-                message += "\n\tExtension \"";
-                message += static_cast<std::string>(layer);
-                message += "\" is not supported";
-                LOG_INFO("{}", message);
+                stringStream << "\n\tExtension \"" << static_cast<std::string>(layer) << "\" is not supported";
+                LOG_INFO("{}", stringStream.str());
             }
             return false;
         }
     }
     if (debug) {
-        LOG_INFO("{}", message);
+        LOG_INFO("{}", stringStream.str());
     }
     return true;
 }
@@ -122,17 +110,15 @@ Instance VulkanInit::makeInstance(const char *appName, bool debugMode) {
     extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
     if (debugMode) {
-        std::string message = "Extension to be requested\n";
+        std::ostringstream stringStream;
+        stringStream << "Extension to be requested\n";
 
         for (int i = 0; i < extensions.size() - 1; ++i) {
-            message += "\t";
-            message += extensions[i];
-            message += "\n";
+            stringStream << "\t" << extensions[i] << "\n";
         }
-        message += "\t";
-        message += extensions.back();
+        stringStream << "\t" << extensions.back();
 
-        LOG_INFO("{}", message);
+        LOG_INFO("{}", stringStream.str());
     }
 
     std::vector<const char*> layers;
@@ -164,25 +150,4 @@ Instance VulkanInit::makeInstance(const char *appName, bool debugMode) {
         }
         return nullptr;
     }
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData) {
-    std::string message = "Validation layer: ";
-    message += pCallbackData->pMessage;
-    LOG_ERROR("{}", message);
-    return VK_FALSE;
-}
-
-DebugUtilsMessengerEXT VulkanInit::makeDebugMessenger(const Instance& instance, const DispatchLoaderDynamic& dld) {
-    DebugUtilsMessengerCreateInfoEXT createInfo;
-    createInfo.flags = DebugUtilsMessengerCreateFlagsEXT();
-    createInfo.messageSeverity = DebugUtilsMessageSeverityFlagBitsEXT::eWarning | DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    createInfo.messageType = DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation | DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-    createInfo.pfnUserCallback = &debugCallback;
-    createInfo.pUserData = nullptr;
-    return instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dld);
 }

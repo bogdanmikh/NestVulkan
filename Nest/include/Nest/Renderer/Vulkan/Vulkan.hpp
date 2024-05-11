@@ -12,12 +12,12 @@ class Vulkan final : public Renderer {
 public:
     Vulkan();
     ~Vulkan() override;
-    void init(bool debug, const char* appName) override;
+    void init(const GlobalSettings &globalSettings) override;
 private:
-    void makeInstance(const char *appName);
+    void makeInstance();
     void makeDevice();
 
-    bool debugMode;
+    GlobalSettings m_globalSettings;
 
     //instance-related variables
     Instance instance;
@@ -30,4 +30,8 @@ private:
     Device logicalDevice;
     Queue graphicsQueue;
     Queue presentQueue;
+    SwapchainKHR swapchain{ nullptr };
+    std::vector<Image> swapchainImages{ nullptr };
+    Format swapchainFormat;
+    Extent2D swapchainExtent;
 };

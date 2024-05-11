@@ -12,8 +12,8 @@ std::shared_ptr<spdlog::logger> Logger::s_logger = nullptr;
 Application::Application() : debugMode(true) {}
 
 Application::~Application() {
-    delete window;
     delete renderer;
+    delete window;
 }
 
 void Application::init(const GlobalSettings& globalSettings) {
@@ -46,7 +46,7 @@ void Application::init(const GlobalSettings& globalSettings) {
             return;
         }
         renderer = new Vulkan;
-        renderer->init(debugMode, globalSettings.appName.c_str());
+        renderer->init(globalSettings);
     } else if (globalSettings.api == GlobalSettings::OpenGL) {
         LOG_ERROR("OpenGL not supported now");
     }

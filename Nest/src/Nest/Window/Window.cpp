@@ -9,9 +9,11 @@ void Window::init(const char *name, int resolutionX, int resolutionY, bool fullS
         return;
     }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-//    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    if (fullScreen) glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+    if (fullScreen) {
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+    }
 #if defined(__APPLE__) || defined(__MACH__)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);

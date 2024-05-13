@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Nest/Renderer/Renderer.hpp"
-
 #include <vulkan/vulkan.hpp>
 #include <vector>
 #include <string>
+
+#include "Nest/Renderer/Renderer.hpp"
+#include "Swapchain.hpp"
 
 using namespace vk;
 
@@ -30,8 +31,8 @@ private:
     Device logicalDevice;
     Queue graphicsQueue;
     Queue presentQueue;
-    SwapchainKHR swapchain{ nullptr };
-    std::vector<Image> swapchainImages{ nullptr };
+    SwapchainKHR swapchain;
+    std::vector<VulkanInit::SwapChainFrame> swapchainFrames;
     Format swapchainFormat;
     Extent2D swapchainExtent;
 };

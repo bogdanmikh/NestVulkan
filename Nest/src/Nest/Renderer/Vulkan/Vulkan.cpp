@@ -11,15 +11,25 @@
 #include "Nest/Renderer/Vulkan/Vulkan.hpp"
 #include "Nest/Renderer/Vulkan/Device.hpp"
 #include "Nest/Renderer/Vulkan/Instance.hpp"
+#include "Nest/Renderer/Vulkan/Swapchain.hpp"
 #include "Nest/Renderer/Vulkan/Logging.hpp"
 
 using namespace vk;
 
 Vulkan::Vulkan()
-        : instance(nullptr), debugMessenger(nullptr), logicalDevice(nullptr), physicalDevice(nullptr),
-          graphicsQueue(nullptr), presentQueue(nullptr) {}
+        : instance(nullptr)
+        , debugMessenger(nullptr)
+        , logicalDevice(nullptr)
+        , physicalDevice(nullptr)
+        , graphicsQueue(nullptr)
+        , presentQueue(nullptr)
+        , swapchain(nullptr) {}
 
 Vulkan::~Vulkan() {
+    for (const auto &frame: swapchainFrames) {
+        logicalDevice.destroyImageView(frame.imageView);
+    }
+
     logicalDevice.destroySwapchainKHR(swapchain);
     logicalDevice.destroy();
     instance.destroySurfaceKHR(surface);
@@ -62,11 +72,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     std::ostringstream stringStream;
     stringStream << "Validation layer: ";
     stringStream << pCallbackData->pMessage;
-    if (messageType == VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        LOG_WARN("{}", stringStream.str());
-    } else {
-        LOG_ERROR("{}", stringStream.str());
-    }
+    LOG_ERROR("{}", stringStream.str());
 
     return VK_FALSE;
 }
@@ -100,12 +106,12 @@ void Vulkan::makeDevice() {
                 auto queue = VulkanInit::getQueues(physicalDevice, logicalDevice, surface, m_globalSettings.debugMode);
                 graphicsQueue = queue[0];
                 presentQueue = queue[1];
-                SwapChainBundle bundle = VulkanInit::createSwapchain(logicalDevice, physicalDevice, surface,
+                VulkanInit::SwapChainBundle bundle = VulkanInit::createSwapchain(logicalDevice, physicalDevice, surface,
                                                                      m_globalSettings.resolutionX,
                                                                      m_globalSettings.resolutionY,
                                                                      m_globalSettings.debugMode);
                 swapchain = bundle.swapchain;
-                swapchainImages = bundle.images;
+                swapchainFrames = bundle.frames;
                 swapchainFormat = bundle.format;
                 swapchainExtent = bundle.extent;
                 return;

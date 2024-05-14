@@ -2,6 +2,7 @@
 
 #include "Nest/Window/Window.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Window/Events.hpp"
 
 void Window::init(const char *name, int resolutionX, int resolutionY, bool fullScreen) {
     if (glfwInit() != GLFW_TRUE) {
@@ -32,6 +33,7 @@ void Window::init(const char *name, int resolutionX, int resolutionY, bool fullS
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
     this->handle = window;
+    Events::init(handle);
 }
 
 Window::~Window() {

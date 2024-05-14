@@ -8,7 +8,7 @@
 #include "Nest/Renderer/Renderer.hpp"
 #include "Nest/Objects/GlobalSettings.hpp"
 
-class Application {
+class Application final {
 public:
     ~Application();
     inline static Application* getInstance() {

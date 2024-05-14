@@ -3,6 +3,7 @@
 
 #include "Nest/Application/Application.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Window/Events.hpp"
 #include "Nest/Renderer/Vulkan/Vulkan.hpp"
 
 using namespace vk;
@@ -99,9 +100,16 @@ void Application::loop() {
         double deltaTime = deltaTimeMillis / 1000.0;
         deltaTimeMillis = 0;
 
+        if (Events::isJustKeyPressed(Key::TAB)) {
+            Events::toggleCursorLock();
+        }
+        if (Events::isJustKeyPressed(Key::ESCAPE)) {
+            close();
+        }
+
         currentLevel->update(deltaTime);
+        Events::pollEvents();
         window->swapBuffers();
-        glfwPollEvents();
     }
 }
 

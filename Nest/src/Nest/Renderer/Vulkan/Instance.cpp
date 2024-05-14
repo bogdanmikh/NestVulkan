@@ -3,7 +3,7 @@
 #include "Nest/Renderer/Vulkan/Instance.hpp"
 #include "Nest/Logger/Logger.hpp"
 
-bool VulkanInit::supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug) {
+bool InstanceInit::supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug) {
     std::vector<ExtensionProperties> supportedExtensions = enumerateInstanceExtensionProperties();
 
     if (debug) {
@@ -76,7 +76,7 @@ bool VulkanInit::supported(std::vector<const char*> &needExtensions, std::vector
     return true;
 }
 
-Instance VulkanInit::makeInstance(const char *appName, bool debugMode) {
+Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
     if (debugMode) {
         LOG_INFO("Make instance...");
     }
@@ -127,7 +127,7 @@ Instance VulkanInit::makeInstance(const char *appName, bool debugMode) {
     }
 
     // check can support GLFW this device for Vulkan
-    if (!VulkanInit::supported(extensions, layers, debugMode)) {
+    if (!InstanceInit::supported(extensions, layers, debugMode)) {
         if (debugMode) {
             LOG_ERROR("Device not supported need extensions");
         }

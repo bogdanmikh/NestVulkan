@@ -1,8 +1,8 @@
 #include "Nest/Renderer/Vulkan/QueueFamilies.hpp"
 #include "Nest/Logger/Logger.hpp"
 
-VulkanUtil::QueueFamilyIndices
-VulkanUtil::findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
+QueueFamilies::QueueFamilyIndices
+QueueFamilies::findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
     QueueFamilyIndices indices;
     std::vector<QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
 

@@ -3,8 +3,8 @@
 #include "Nest/Renderer/Vulkan/Logging.hpp"
 #include "Nest/Renderer/Vulkan/QueueFamilies.hpp"
 
-VulkanInit::SwapChainSupportDetails
-VulkanInit::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR &surface, bool debug) {
+Swapchain::SwapChainSupportDetails
+Swapchain::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR &surface, bool debug) {
     SwapChainSupportDetails support;
     support.capabilities = device.getSurfaceCapabilitiesKHR(surface);
 
@@ -72,7 +72,7 @@ VulkanInit::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR
     return support;
 }
 
-SurfaceFormatKHR VulkanInit::chooseSwapchainSurfaceFormat(const std::vector<SurfaceFormatKHR> &formats) {
+SurfaceFormatKHR Swapchain::chooseSwapchainSurfaceFormat(const std::vector<SurfaceFormatKHR> &formats) {
     for (const auto &format: formats) {
         // color format an 0-255, non linear
         if (format.format == Format::eB8G8R8A8Unorm
@@ -83,7 +83,7 @@ SurfaceFormatKHR VulkanInit::chooseSwapchainSurfaceFormat(const std::vector<Surf
     return formats[0];
 }
 
-PresentModeKHR VulkanInit::chooseSwapchainPresentMode(const std::vector<PresentModeKHR> &presentModes) {
+PresentModeKHR Swapchain::chooseSwapchainPresentMode(const std::vector<PresentModeKHR> &presentModes) {
     for (const auto &presentMode: presentModes) {
         // rendering mode
         if (presentMode == PresentModeKHR::eMailbox) {
@@ -94,7 +94,7 @@ PresentModeKHR VulkanInit::chooseSwapchainPresentMode(const std::vector<PresentM
 }
 
 Extent2D
-VulkanInit::chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceCapabilitiesKHR &capabilities) {
+Swapchain::chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceCapabilitiesKHR &capabilities) {
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     } else {
@@ -114,8 +114,8 @@ VulkanInit::chooseSwapchainExtent(uint32_t width, uint32_t height, const Surface
     }
 }
 
-VulkanInit::SwapChainBundle
-VulkanInit::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, SurfaceKHR surface, int width,
+Swapchain::SwapChainBundle
+Swapchain::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, SurfaceKHR surface, int width,
                             int height, bool debug) {
     SwapChainSupportDetails support = querySwapchainSupport(physicalDevice, surface, debug);
 
@@ -142,7 +142,7 @@ VulkanInit::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice,
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = ImageUsageFlagBits::eColorAttachment;
 
-    VulkanUtil::QueueFamilyIndices indices = VulkanUtil::findQueueFamilies(physicalDevice, surface, debug);
+    QueueFamilies::QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(physicalDevice, surface, debug);
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     if (indices.graphicsFamily != indices.presentFamily) {

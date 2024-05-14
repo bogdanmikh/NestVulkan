@@ -5,8 +5,9 @@
 
 using namespace vk;
 
-namespace VulkanInit {
-    bool supported(std::vector<const char *> &needExtensions, std::vector<const char *> &layers, bool debug);
+class InstanceInit {
+public:
+    static bool supported(std::vector<const char *> &needExtensions, std::vector<const char *> &layers, bool debug);
 
-    Instance makeInstance(const char *appName, bool debugMode);
-}
+    static Instance makeInstance(const char *appName, bool debugMode);
+};

@@ -46,7 +46,7 @@ void Vulkan::init(const GlobalSettings &globalSettings) {
 }
 
 void Vulkan::makeInstance() {
-    instance = VulkanInit::makeInstance(m_globalSettings.appName.c_str(), m_globalSettings.debugMode);
+    instance = InstanceInit::makeInstance(m_globalSettings.appName.c_str(), m_globalSettings.debugMode);
     dld = DispatchLoaderDynamic(instance, vkGetInstanceProcAddr);
     if (m_globalSettings.debugMode) {
         debugMessenger = VulkanLogging::makeDebugMessenger(instance, dld);
@@ -91,22 +91,22 @@ void Vulkan::makeDevice() {
 
     std::vector<std::array<bool, 5>> devicesTypes;
     for (const auto &device: availableDevices) {
-        devicesTypes.emplace_back(VulkanInit::getDeviceProperties(device));
+        devicesTypes.emplace_back(DeviceInit::getDeviceProperties(device));
     }
 
     for (int numType = 0; numType < 5; ++numType) {
         for (int numDevice = 0; numDevice < availableDevices.size(); ++numDevice) {
             if (devicesTypes[numDevice][numType] &&
-                VulkanInit::isSuitable(availableDevices[numDevice], m_globalSettings.debugMode)) {
+                    DeviceInit::isSuitable(availableDevices[numDevice], m_globalSettings.debugMode)) {
                 if (m_globalSettings.debugMode) {
                     VulkanLogging::logDeviceProperties(availableDevices[numDevice], devicesTypes[numDevice]);
                 }
                 physicalDevice = availableDevices[numDevice];
-                logicalDevice = VulkanInit::createLogicalDevice(physicalDevice, surface, m_globalSettings.debugMode);
-                auto queue = VulkanInit::getQueues(physicalDevice, logicalDevice, surface, m_globalSettings.debugMode);
+                logicalDevice = DeviceInit::createLogicalDevice(physicalDevice, surface, m_globalSettings.debugMode);
+                auto queue = DeviceInit::getQueues(physicalDevice, logicalDevice, surface, m_globalSettings.debugMode);
                 graphicsQueue = queue[0];
                 presentQueue = queue[1];
-                VulkanInit::SwapChainBundle bundle = VulkanInit::createSwapchain(logicalDevice, physicalDevice, surface,
+                Swapchain::SwapChainBundle bundle = Swapchain::createSwapchain(logicalDevice, physicalDevice, surface,
                                                                      m_globalSettings.resolutionX,
                                                                      m_globalSettings.resolutionY,
                                                                      m_globalSettings.debugMode);

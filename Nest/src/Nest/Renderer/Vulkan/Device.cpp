@@ -9,7 +9,7 @@
 
 using namespace vk;
 
-std::array<bool, 5> VulkanInit::getDeviceProperties(const PhysicalDevice &device) {
+std::array<bool, 5> DeviceInit::getDeviceProperties(const PhysicalDevice &device) {
     PhysicalDeviceProperties properties = device.getProperties();
 
     std::array<bool, 5> typeGPU{false};
@@ -29,7 +29,7 @@ std::array<bool, 5> VulkanInit::getDeviceProperties(const PhysicalDevice &device
     return typeGPU;
 }
 
-bool VulkanInit::checkDeviceExtensionSupport(const PhysicalDevice &device,
+bool DeviceInit::checkDeviceExtensionSupport(const PhysicalDevice &device,
                                              const std::vector<const char *> &requestedExtensions, bool debug) {
 //    Check if a given physical device can satisfy a list of requested device extensions.
     std::set<std::string> requiredExtensions(requestedExtensions.begin(), requestedExtensions.end());
@@ -53,7 +53,7 @@ bool VulkanInit::checkDeviceExtensionSupport(const PhysicalDevice &device,
     return requiredExtensions.empty();
 }
 
-bool VulkanInit::isSuitable(const PhysicalDevice &device, bool debug) {
+bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
     std::ostringstream stringStream;
     stringStream << "Checking if device is suitable";
     std::vector<const char *> requestedExtensions;
@@ -86,8 +86,8 @@ bool VulkanInit::isSuitable(const PhysicalDevice &device, bool debug) {
 }
 
 
-Device VulkanInit::createLogicalDevice(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
-    VulkanUtil::QueueFamilyIndices indices = VulkanUtil::findQueueFamilies(physicalDevice, surface, debug);
+Device DeviceInit::createLogicalDevice(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
+    QueueFamilies::QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(physicalDevice, surface, debug);
     std::vector<uint32_t> uniqueIndices;
     uniqueIndices.emplace_back(indices.graphicsFamily.value());
     if (indices.graphicsFamily.value() != indices.presentFamily.value()) {
@@ -144,9 +144,9 @@ Device VulkanInit::createLogicalDevice(const PhysicalDevice &physicalDevice, con
 }
 
 std::array<Queue, 2>
-VulkanInit::getQueues(const PhysicalDevice &physicalDevice, const Device &device, const SurfaceKHR &surface,
+DeviceInit::getQueues(const PhysicalDevice &physicalDevice, const Device &device, const SurfaceKHR &surface,
                       bool debug) {
-    VulkanUtil::QueueFamilyIndices indices = VulkanUtil::findQueueFamilies(physicalDevice, surface, false);
+    QueueFamilies::QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(physicalDevice, surface, false);
 
     return {
             device.getQueue(indices.graphicsFamily.value(), 0),

@@ -32,7 +32,7 @@ private:
     Queue graphicsQueue;
     Queue presentQueue;
     SwapchainKHR swapchain;
-    std::vector<VulkanInit::SwapChainFrame> swapchainFrames;
+    std::vector<Swapchain::SwapChainFrame> swapchainFrames;
     Format swapchainFormat;
     Extent2D swapchainExtent;
 };

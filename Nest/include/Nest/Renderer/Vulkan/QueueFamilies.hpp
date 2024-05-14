@@ -6,7 +6,8 @@
 
 using namespace vk;
 
-namespace VulkanUtil {
+class QueueFamilies {
+public:
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentFamily;
@@ -16,5 +17,5 @@ namespace VulkanUtil {
         }
     };
 
-    QueueFamilyIndices findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
-}
+    static QueueFamilyIndices findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
+};

@@ -4,16 +4,17 @@
 
 using namespace vk;
 
-namespace VulkanLogging {
-    DebugUtilsMessengerEXT makeDebugMessenger(const Instance &instance, const DispatchLoaderDynamic &dld);
+class VulkanLogging {
+public:
+    static DebugUtilsMessengerEXT makeDebugMessenger(const Instance &instance, const DispatchLoaderDynamic &dld);
 
-    void logDeviceProperties(const PhysicalDevice &device, const std::array<bool, 5> &types);
+    static void logDeviceProperties(const PhysicalDevice &device, const std::array<bool, 5> &types);
 
-    std::vector<const char *> logTransformBits(const SurfaceTransformFlagsKHR &bits);
+    static std::vector<const char *> logTransformBits(const SurfaceTransformFlagsKHR &bits);
 
-    std::vector<const char *> logAlphaCompositeBits(const CompositeAlphaFlagsKHR &bits);
+    static std::vector<const char *> logAlphaCompositeBits(const CompositeAlphaFlagsKHR &bits);
 
-    std::vector<const char *> logImageUsageBits(const ImageUsageFlags &bits);
+    static std::vector<const char *> logImageUsageBits(const ImageUsageFlags &bits);
 
-    const char* logPresentMode(const PresentModeKHR& presentMode);
-}
+    static const char* logPresentMode(const PresentModeKHR& presentMode);
+};

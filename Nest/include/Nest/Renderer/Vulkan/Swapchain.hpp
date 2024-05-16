@@ -15,6 +15,8 @@ namespace Swapchain {
     struct SwapChainFrame {
         Image image;
         ImageView imageView;
+        Framebuffer framebuffer;
+        CommandBuffer commandBuffer;
     };
 
     struct SwapChainBundle {

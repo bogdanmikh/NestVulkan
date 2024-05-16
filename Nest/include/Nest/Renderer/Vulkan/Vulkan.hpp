@@ -14,20 +14,23 @@ public:
     Vulkan();
     ~Vulkan() override;
     void init(const GlobalSettings &globalSettings) override;
+    void render() override;
 private:
     void makeInstance();
     void makeDevice();
     void makePipeline();
+    void finalizeSetup();
+    void recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t imageIndex);
 
     GlobalSettings m_globalSettings;
 
-    //instance-related variables
+    // Instance-related variables
     Instance instance;
     DebugUtilsMessengerEXT debugMessenger;
     DispatchLoaderDynamic dld;
     SurfaceKHR surface;
 
-    //device-related variables
+    // Device-related variables
     PhysicalDevice physicalDevice;
     Device logicalDevice;
     Queue graphicsQueue;
@@ -37,8 +40,16 @@ private:
     Format swapchainFormat;
     Extent2D swapchainExtent;
 
-    //pipeline-related variables
+    // Pipeline-related variables
     PipelineLayout pipelineLayout;
     RenderPass renderPass;
     Pipeline pipeline;
+
+    // Command-related variables
+    CommandPool commandPool; // responsible for memory allocation
+    CommandBuffer mainCommandBuffer;
+
+    // Synchronization objects
+    Fence inFlightFence;
+    Semaphore imageAvailable, rendererFinished;
 };

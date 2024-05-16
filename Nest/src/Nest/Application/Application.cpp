@@ -107,6 +107,7 @@ void Application::loop() {
             close();
         }
 
+        renderer->render();
         currentLevel->update(deltaTime);
         Events::pollEvents();
         window->swapBuffers();

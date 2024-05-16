@@ -3,7 +3,8 @@
 #include "Nest/Renderer/Vulkan/Instance.hpp"
 #include "Nest/Logger/Logger.hpp"
 
-bool InstanceInit::supported(std::vector<const char*> &needExtensions, std::vector<const char*> &layers, bool debug) {
+bool InstanceInit::supported(const std::vector<const char *> &needExtensions, const std::vector<const char *> &layers,
+                             bool debug) {
     std::vector<ExtensionProperties> supportedExtensions = enumerateInstanceExtensionProperties();
 
     if (debug) {
@@ -17,13 +18,14 @@ bool InstanceInit::supported(std::vector<const char*> &needExtensions, std::vect
     }
 
     std::ostringstream message;
-    for (const auto &extension : needExtensions) {
+    for (const auto &extension: needExtensions) {
         bool canSupport = false;
         for (const auto &supportedExtension: supportedExtensions) {
             if (strcmp(extension, supportedExtension.extensionName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    message << "\n\tExtension \"" << static_cast<std::string>(supportedExtension.extensionName) << "\" is supported";
+                    message << "\n\tExtension \"" << static_cast<std::string>(supportedExtension.extensionName)
+                            << "\" is supported";
                 }
                 break;
             }
@@ -57,7 +59,8 @@ bool InstanceInit::supported(std::vector<const char*> &needExtensions, std::vect
             if (strcmp(layer, supportedLayer.layerName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    message << "\n\tExtension \"" << static_cast<std::string>(supportedLayer.layerName) << "\" is supported";
+                    message << "\n\tExtension \"" << static_cast<std::string>(supportedLayer.layerName)
+                            << "\" is supported";
                 }
                 break;
             }
@@ -102,7 +105,7 @@ Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
     // the necessary extensions that GLFW needs to work with Vulkan
     glfwExtension = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-    std::vector<const char*> extensions(glfwExtension, glfwExtension + glfwExtensionCount);
+    std::vector<const char *> extensions(glfwExtension, glfwExtension + glfwExtensionCount);
     if (debugMode) {
         // add extension utils for debug
         extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -121,7 +124,7 @@ Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
         LOG_INFO("{}", message.str());
     }
 
-    std::vector<const char*> layers;
+    std::vector<const char *> layers;
     if (debugMode) {
         layers.push_back("VK_LAYER_KHRONOS_validation");
     }

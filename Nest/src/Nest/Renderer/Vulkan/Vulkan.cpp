@@ -16,6 +16,9 @@
 #include "Nest/Renderer/Vulkan/Swapchain.hpp"
 #include "Nest/Renderer/Vulkan/Logging.hpp"
 #include "Nest/Renderer/Vulkan/Pipeline.hpp"
+#include "Nest/Renderer/Vulkan/Sync.hpp"
+#include "Nest/Renderer/Vulkan/Commands.hpp"
+#include "Nest/Renderer/Vulkan/Framebuffer.hpp"
 
 using namespace vk;
 
@@ -24,13 +27,21 @@ Vulkan::Vulkan()
           graphicsQueue(nullptr), presentQueue(nullptr), swapchain(nullptr) {}
 
 Vulkan::~Vulkan() {
-    for (const auto &frame: swapchainFrames) {
-        logicalDevice.destroyImageView(frame.imageView);
-    }
+    logicalDevice.waitIdle();
+
+    logicalDevice.destroySemaphore(imageAvailable);
+    logicalDevice.destroySemaphore(rendererFinished);
+    logicalDevice.destroyFence(inFlightFence);
+    logicalDevice.destroyCommandPool(commandPool);
 
     logicalDevice.destroyPipeline(pipeline);
     logicalDevice.destroyPipelineLayout(pipelineLayout);
     logicalDevice.destroyRenderPass(renderPass);
+
+    for (const auto &frame: swapchainFrames) {
+        logicalDevice.destroyImageView(frame.imageView);
+        logicalDevice.destroyFramebuffer(frame.framebuffer);
+    }
 
     logicalDevice.destroySwapchainKHR(swapchain);
     logicalDevice.destroy();
@@ -46,6 +57,7 @@ void Vulkan::init(const GlobalSettings &globalSettings) {
     makeInstance();
     makeDevice();
     makePipeline();
+    finalizeSetup();
 }
 
 void Vulkan::makeInstance() {
@@ -125,4 +137,109 @@ void Vulkan::makePipeline() {
     pipeline = output.pipeline;
     pipelineLayout = output.layout;
     renderPass = output.renderPass;
+}
+
+void Vulkan::finalizeSetup() {
+    FrameBufferInit::FramebufferInput framebufferInput;
+    framebufferInput.device = logicalDevice;
+    framebufferInput.renderPass = renderPass;
+    framebufferInput.swapchainExtent = swapchainExtent;
+    FrameBufferInit::makeFrameBuffers(framebufferInput, swapchainFrames, m_globalSettings.debugMode);
+
+    commandPool = Commands::makeCommandPool(logicalDevice, physicalDevice, surface, m_globalSettings.debugMode);
+
+    Commands::CommandBufferInputChunk commandBufferInput = {logicalDevice, commandPool, swapchainFrames};
+
+    mainCommandBuffer = Commands::makeCommandBuffers(commandBufferInput, m_globalSettings.debugMode);
+
+    inFlightFence = Sync::makeFence(logicalDevice, m_globalSettings.debugMode);
+    imageAvailable = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+    rendererFinished = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+}
+
+void Vulkan::recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t imageIndex) {
+    CommandBufferBeginInfo beginInfo;
+    try {
+        commandBuffer.begin(beginInfo);
+    } catch (const SystemError &err) {
+        if (m_globalSettings.debugMode) {
+            LOG_ERROR("Failed to begin recording command buffer!\n{}", err.what());
+        }
+    }
+
+    RenderPassBeginInfo renderPassInfo;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapchainFrames[imageIndex].framebuffer;
+    renderPassInfo.renderArea.offset.x = 0;
+    renderPassInfo.renderArea.offset.y = 0;
+    renderPassInfo.renderArea.extent = swapchainExtent;
+
+    std::array<float, 4> clearColorVal = {0.8, 1., 0., 1.};
+    ClearValue clearColor(clearColorVal);
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    commandBuffer.beginRenderPass(&renderPassInfo, SubpassContents::eInline);
+    commandBuffer.bindPipeline(PipelineBindPoint::eGraphics, pipeline);
+
+    commandBuffer.draw(3, 1, 0, 0);
+
+    commandBuffer.endRenderPass();
+
+    try {
+        commandBuffer.end();
+    } catch (const SystemError &err) {
+        if (m_globalSettings.debugMode) {
+            LOG_ERROR("Failed to record command buffer!\n{}", err.what());
+        }
+    }
+}
+
+void Vulkan::render() {
+    logicalDevice.waitForFences(1, &inFlightFence, VK_TRUE, UINT64_MAX);
+    logicalDevice.resetFences(1, &inFlightFence);
+
+    // acquireNextImageKHR(SwapChainKHR, timeout, semaphore_to_signal, fence)
+    uint32_t imageIndex{logicalDevice.acquireNextImageKHR(swapchain, UINT64_MAX, imageAvailable, nullptr).value};
+
+    CommandBuffer commandBuffer = swapchainFrames[imageIndex].commandBuffer;
+
+    commandBuffer.reset();
+
+    recordDrawCommands(commandBuffer, imageIndex);
+
+    SubmitInfo submitInfo;
+
+    Semaphore waitSemaphores[] = { imageAvailable };
+    PipelineStageFlags waitStages[] = { PipelineStageFlagBits::eColorAttachmentOutput };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    Semaphore signalSemaphores[] = { rendererFinished };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    try {
+        graphicsQueue.submit(submitInfo, inFlightFence);
+    } catch (const SystemError &err) {
+
+        if (m_globalSettings.debugMode) {
+            LOG_ERROR("Failed to submit draw command buffer!\n{}", err.what());
+        }
+    }
+
+    PresentInfoKHR presentInfo;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    SwapchainKHR swapChains[] = { swapchain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    presentQueue.presentKHR(presentInfo);
 }

@@ -129,7 +129,7 @@ PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle 
     rasterizer.depthBiasEnable = VK_FALSE; // Depth bias can be useful in shadow maps.
     pipelineCreateInfo.pRasterizationState = &rasterizer;
 
-    //Fragment Shader
+    // Fragment Shader
     if (debug) {
         LOG_INFO("Create fragment shader module");
     }
@@ -142,7 +142,7 @@ PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle 
     fragmentShaderInfo.module = fragmentShader;
     fragmentShaderInfo.pName = "main";
     shaderStages.emplace_back(fragmentShaderInfo);
-    //Now both shaders have been made, we can declare them to the pipeline info
+    // Now both shaders have been made, we can declare them to the pipeline info
     pipelineCreateInfo.stageCount = shaderStages.size();
     pipelineCreateInfo.pStages = shaderStages.data();
 
@@ -154,7 +154,7 @@ PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle 
     multisampling.rasterizationSamples = SampleCountFlagBits::e1;
     pipelineCreateInfo.pMultisampleState = &multisampling;
 
-    //Color Blend
+    // Color Blend
     PipelineColorBlendAttachmentState colorBlendAttachment;
     colorBlendAttachment.colorWriteMask =
             ColorComponentFlagBits::eR | ColorComponentFlagBits::eG | ColorComponentFlagBits::eB |

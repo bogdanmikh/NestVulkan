@@ -1,4 +1,5 @@
 #include <vector>
+#include <sstream>
 
 #include "Nest/Logger/Logger.hpp"
 #include "Nest/Renderer/Vulkan/Logging.hpp"
@@ -10,9 +11,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData) {
-    std::string message = "Validation layer: ";
-    message += pCallbackData->pMessage;
-    LOG_ERROR("{}", message);
+    std::ostringstream message;
+    message << "Validation layer: ";
+    message << pCallbackData->pMessage;
+    LOG_ERROR("{}", message.str());
     return VK_FALSE;
 }
 
@@ -28,17 +30,17 @@ DebugUtilsMessengerEXT VulkanLogging::makeDebugMessenger(const Instance& instanc
 
 
 void VulkanLogging::logDeviceProperties(const PhysicalDevice &device, const std::array<bool, 5> &types) {
-    std::ostringstream stringStream;
-    stringStream << "\n\tDevice name: " << static_cast<const char*>(device.getProperties().deviceName) << "\n\tDevice type:";
+    std::ostringstream message;
+    message << "\n\tDevice name: " << static_cast<const char*>(device.getProperties().deviceName) << "\n\tDevice type:";
     std::array<const char*, 5> allTypes{
             "Discrete GPU", "Integrated GPU", "Virtual GPU", "CPU", "Other"
     };
     for (int i = 0; i < 5; ++i) {
         if (types[i]) {
-            stringStream << "\n\t" << allTypes[i];
+            message << "\n\t" << allTypes[i];
         }
     }
-    LOG_INFO("{}", stringStream.str());
+    LOG_INFO("{}", message.str());
 }
 
 std::vector<const char *> VulkanLogging::logTransformBits(const SurfaceTransformFlagsKHR &bits) {

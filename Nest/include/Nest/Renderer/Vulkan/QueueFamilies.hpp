@@ -6,8 +6,7 @@
 
 using namespace vk;
 
-class QueueFamilies {
-public:
+namespace QueueFamilies {
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentFamily;
@@ -17,5 +16,5 @@ public:
         }
     };
 
-    static QueueFamilyIndices findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
+    QueueFamilyIndices findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
 };

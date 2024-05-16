@@ -34,52 +34,52 @@ bool DeviceInit::checkDeviceExtensionSupport(const PhysicalDevice &device,
 //    Check if a given physical device can satisfy a list of requested device extensions.
     std::set<std::string> requiredExtensions(requestedExtensions.begin(), requestedExtensions.end());
 
-    std::ostringstream stringStream;
+    std::ostringstream message;
     if (debug) {
-        stringStream << "Device can support extensions:";
+        message << "Device can support extensions:";
     }
     auto extensions = device.enumerateDeviceExtensionProperties();
     for (const auto &extension: extensions) {
         if (debug) {
-            stringStream << "\n\t" << static_cast<const char *>(extension.extensionName);
+            message << "\n\t" << static_cast<const char *>(extension.extensionName);
         }
         //remove this from the list of required extensions (set checks for equality automatically)
         requiredExtensions.erase(extension.extensionName);
     }
     if (debug) {
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
     // if the set is empty then all requirements have been satisfied
     return requiredExtensions.empty();
 }
 
 bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
-    std::ostringstream stringStream;
-    stringStream << "Checking if device is suitable";
+    std::ostringstream message;
+    message << "Checking if device is suitable";
     std::vector<const char *> requestedExtensions;
     requestedExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 #ifdef PLATFORM_MACOS
     requestedExtensions.emplace_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
     if (debug) {
-        stringStream << "\n\tWe are requesting device extensions:";
+        message << "\n\tWe are requesting device extensions:";
 
         for (const char *extension: requestedExtensions) {
-            stringStream << "\n\t\"" << std::string(extension) << "\"";
+            message << "\n\t\"" << std::string(extension) << "\"";
         }
     }
 
     bool extensionsSupported = checkDeviceExtensionSupport(device, requestedExtensions, debug);
     if (extensionsSupported) {
         if (debug) {
-            stringStream << "\n\tDevice can support the requested extensions!";
-            LOG_INFO("{}", stringStream.str());
+            message << "\n\tDevice can support the requested extensions!";
+            LOG_INFO("{}", message.str());
         }
         return true;
     } else {
         if (debug) {
-            stringStream << "\n\tDevice can't support the requested extensions!";
-            LOG_INFO("{}", stringStream.str());
+            message << "\n\tDevice can't support the requested extensions!";
+            LOG_INFO("{}", message.str());
         }
         return false;
     }

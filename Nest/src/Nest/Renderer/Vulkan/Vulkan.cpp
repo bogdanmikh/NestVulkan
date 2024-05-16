@@ -4,6 +4,8 @@
 
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <sstream>
+#include <filesystem>
 #include <set>
 
 #include "Nest/Application/Application.hpp"
@@ -13,22 +15,22 @@
 #include "Nest/Renderer/Vulkan/Instance.hpp"
 #include "Nest/Renderer/Vulkan/Swapchain.hpp"
 #include "Nest/Renderer/Vulkan/Logging.hpp"
+#include "Nest/Renderer/Vulkan/Pipeline.hpp"
 
 using namespace vk;
 
 Vulkan::Vulkan()
-        : instance(nullptr)
-        , debugMessenger(nullptr)
-        , logicalDevice(nullptr)
-        , physicalDevice(nullptr)
-        , graphicsQueue(nullptr)
-        , presentQueue(nullptr)
-        , swapchain(nullptr) {}
+        : instance(nullptr), debugMessenger(nullptr), logicalDevice(nullptr), physicalDevice(nullptr),
+          graphicsQueue(nullptr), presentQueue(nullptr), swapchain(nullptr) {}
 
 Vulkan::~Vulkan() {
     for (const auto &frame: swapchainFrames) {
         logicalDevice.destroyImageView(frame.imageView);
     }
+
+    logicalDevice.destroyPipeline(pipeline);
+    logicalDevice.destroyPipelineLayout(pipelineLayout);
+    logicalDevice.destroyRenderPass(renderPass);
 
     logicalDevice.destroySwapchainKHR(swapchain);
     logicalDevice.destroy();
@@ -43,6 +45,7 @@ void Vulkan::init(const GlobalSettings &globalSettings) {
     m_globalSettings = globalSettings;
     makeInstance();
     makeDevice();
+    makePipeline();
 }
 
 void Vulkan::makeInstance() {
@@ -64,19 +67,6 @@ void Vulkan::makeInstance() {
     surface = cStyleSurface;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-        void *pUserData) {
-    std::ostringstream stringStream;
-    stringStream << "Validation layer: ";
-    stringStream << pCallbackData->pMessage;
-    LOG_ERROR("{}", stringStream.str());
-
-    return VK_FALSE;
-}
-
 void Vulkan::makeDevice() {
     if (m_globalSettings.debugMode) {
         LOG_INFO("Choosing physical device...");
@@ -84,9 +74,9 @@ void Vulkan::makeDevice() {
     std::vector<PhysicalDevice> availableDevices = instance.enumeratePhysicalDevices();
 
     if (m_globalSettings.debugMode) {
-        std::ostringstream stringStream;
-        stringStream << "There are: " << availableDevices.size() << " physical devices available on the system";
-        LOG_INFO("{}", stringStream.str());
+        std::ostringstream message;
+        message << "There are: " << availableDevices.size() << " physical devices available on the system";
+        LOG_INFO("{}", message.str());
     }
 
     std::vector<std::array<bool, 5>> devicesTypes;
@@ -97,7 +87,7 @@ void Vulkan::makeDevice() {
     for (int numType = 0; numType < 5; ++numType) {
         for (int numDevice = 0; numDevice < availableDevices.size(); ++numDevice) {
             if (devicesTypes[numDevice][numType] &&
-                    DeviceInit::isSuitable(availableDevices[numDevice], m_globalSettings.debugMode)) {
+                DeviceInit::isSuitable(availableDevices[numDevice], m_globalSettings.debugMode)) {
                 if (m_globalSettings.debugMode) {
                     VulkanLogging::logDeviceProperties(availableDevices[numDevice], devicesTypes[numDevice]);
                 }
@@ -107,9 +97,9 @@ void Vulkan::makeDevice() {
                 graphicsQueue = queue[0];
                 presentQueue = queue[1];
                 Swapchain::SwapChainBundle bundle = Swapchain::createSwapchain(logicalDevice, physicalDevice, surface,
-                                                                     m_globalSettings.resolutionX,
-                                                                     m_globalSettings.resolutionY,
-                                                                     m_globalSettings.debugMode);
+                                                                               m_globalSettings.resolutionX,
+                                                                               m_globalSettings.resolutionY,
+                                                                               m_globalSettings.debugMode);
                 swapchain = bundle.swapchain;
                 swapchainFrames = bundle.frames;
                 swapchainFormat = bundle.format;
@@ -118,4 +108,21 @@ void Vulkan::makeDevice() {
             }
         }
     }
+}
+
+void Vulkan::makePipeline() {
+    PipelineInit::GraphicsPipelineInBundle specification;
+    specification.device = logicalDevice;
+    specification.swapchainExtent = swapchainExtent;
+    specification.swapchainImageFormat = swapchainFormat;
+
+    std::string localPath = std::filesystem::current_path().parent_path().parent_path().parent_path().string() + "/";
+    specification.vertexFilepath = localPath + "Nest/res/Shaders/CompileShaders/vst.spv";
+    specification.fragmentFilepath = localPath + "Nest/res/Shaders/CompileShaders/fst.spv";
+
+    PipelineInit::GraphicsPipelineOutBundle output = PipelineInit::makeGraphicsPipeline(specification,
+                                                                                        m_globalSettings.debugMode);
+    pipeline = output.pipeline;
+    pipelineLayout = output.layout;
+    renderPass = output.renderPass;
 }

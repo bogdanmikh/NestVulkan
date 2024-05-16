@@ -8,70 +8,70 @@ bool InstanceInit::supported(std::vector<const char*> &needExtensions, std::vect
 
     if (debug) {
         // functions that Vulkan supports
-        std::ostringstream stringStream;
-        stringStream << "Device can support the following extensions:";
+        std::ostringstream message;
+        message << "Device can support the following extensions:";
         for (auto &supportedExtension: supportedExtensions) {
-            stringStream << "\n\t" << static_cast<std::string>(supportedExtension.extensionName);
+            message << "\n\t" << static_cast<std::string>(supportedExtension.extensionName);
         }
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
 
-    std::ostringstream stringStream;
+    std::ostringstream message;
     for (const auto &extension : needExtensions) {
         bool canSupport = false;
         for (const auto &supportedExtension: supportedExtensions) {
             if (strcmp(extension, supportedExtension.extensionName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    stringStream << "\n\tExtension \"" << static_cast<std::string>(supportedExtension.extensionName) << "\" is supported";
+                    message << "\n\tExtension \"" << static_cast<std::string>(supportedExtension.extensionName) << "\" is supported";
                 }
                 break;
             }
         }
         if (!canSupport) {
             if (debug) {
-                stringStream << "\n\tExtension \"" << static_cast<std::string>(extension) << "\" is not supported";
+                message << "\n\tExtension \"" << static_cast<std::string>(extension) << "\" is not supported";
             }
-            LOG_INFO("{}", stringStream.str());
+            LOG_INFO("{}", message.str());
             return false;
         }
     }
     if (debug) {
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
-    stringStream.clear();
+    message.clear();
 
     // check device can support layers
     std::vector<LayerProperties> supportedLayers = enumerateInstanceLayerProperties();
     if (debug) {
-        stringStream << "\n\tDevice can support the following layers";
+        message << "\n\tDevice can support the following layers";
         for (const auto &supportedLayer: supportedLayers) {
-            stringStream << "\n\t" << static_cast<std::string>(supportedLayer.layerName);
+            message << "\n\t" << static_cast<std::string>(supportedLayer.layerName);
         }
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
-    stringStream.str().clear();
+    message.str().clear();
     for (const auto &layer: layers) {
         bool canSupport = false;
         for (const auto &supportedLayer: supportedLayers) {
             if (strcmp(layer, supportedLayer.layerName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    stringStream << "\n\tExtension \"" << static_cast<std::string>(supportedLayer.layerName) << "\" is supported";
+                    message << "\n\tExtension \"" << static_cast<std::string>(supportedLayer.layerName) << "\" is supported";
                 }
                 break;
             }
         }
         if (!canSupport) {
             if (debug) {
-                stringStream << "\n\tExtension \"" << static_cast<std::string>(layer) << "\" is not supported";
-                LOG_INFO("{}", stringStream.str());
+                message << "\n\tExtension \"" << static_cast<std::string>(layer) << "\" is not supported";
+                LOG_INFO("{}", message.str());
             }
             return false;
         }
     }
     if (debug) {
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
     return true;
 }
@@ -110,15 +110,15 @@ Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
     extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
     if (debugMode) {
-        std::ostringstream stringStream;
-        stringStream << "Extension to be requested\n";
+        std::ostringstream message;
+        message << "Extension to be requested\n";
 
         for (int i = 0; i < extensions.size() - 1; ++i) {
-            stringStream << "\t" << extensions[i] << "\n";
+            message << "\t" << extensions[i] << "\n";
         }
-        stringStream << "\t" << extensions.back();
+        message << "\t" << extensions.back();
 
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
 
     std::vector<const char*> layers;

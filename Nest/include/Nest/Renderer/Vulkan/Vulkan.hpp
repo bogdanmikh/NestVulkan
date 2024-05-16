@@ -17,6 +17,7 @@ public:
 private:
     void makeInstance();
     void makeDevice();
+    void makePipeline();
 
     GlobalSettings m_globalSettings;
 
@@ -35,4 +36,9 @@ private:
     std::vector<Swapchain::SwapChainFrame> swapchainFrames;
     Format swapchainFormat;
     Extent2D swapchainExtent;
+
+    //pipeline-related variables
+    PipelineLayout pipelineLayout;
+    RenderPass renderPass;
+    Pipeline pipeline;
 };

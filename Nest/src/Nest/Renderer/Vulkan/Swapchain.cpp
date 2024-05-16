@@ -8,66 +8,66 @@ Swapchain::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR 
     SwapChainSupportDetails support;
     support.capabilities = device.getSurfaceCapabilitiesKHR(surface);
 
-    std::ostringstream stringStream;
+    std::ostringstream message;
     if (debug) {
-        stringStream << "\n\tMinimum image count:" << support.capabilities.minImageCount << "\n";
-        stringStream << "\tMaximum image count:" << support.capabilities.maxImageCount << "\n";
+        message << "\n\tMinimum image count:" << support.capabilities.minImageCount << "\n";
+        message << "\tMaximum image count:" << support.capabilities.maxImageCount << "\n";
 
-        stringStream << "\t\tWidth: " << support.capabilities.currentExtent.width << "\n";
-        stringStream << "\t\tHeight: " << support.capabilities.currentExtent.height << "\n";
+        message << "\t\tWidth: " << support.capabilities.currentExtent.width << "\n";
+        message << "\t\tHeight: " << support.capabilities.currentExtent.height << "\n";
 
-        stringStream << "\tMinimum supported extent: \n";
-        stringStream << "\t\tWidth: " << support.capabilities.minImageExtent.width << "\n";
-        stringStream << "\t\tHeight: " << support.capabilities.minImageExtent.height << "\n";
+        message << "\tMinimum supported extent: \n";
+        message << "\t\tWidth: " << support.capabilities.minImageExtent.width << "\n";
+        message << "\t\tHeight: " << support.capabilities.minImageExtent.height << "\n";
 
-        stringStream << "\tMaximum supported extent: \n";
-        stringStream << "\t\tWidth: " << support.capabilities.maxImageExtent.width << "\n";
-        stringStream << "\t\tHeight: " << support.capabilities.maxImageExtent.height << "\n";
+        message << "\tMaximum supported extent: \n";
+        message << "\t\tWidth: " << support.capabilities.maxImageExtent.width << "\n";
+        message << "\t\tHeight: " << support.capabilities.maxImageExtent.height << "\n";
 
-        stringStream << "\tMaximum image array layers: " << support.capabilities.maxImageArrayLayers << "\n";
+        message << "\tMaximum image array layers: " << support.capabilities.maxImageArrayLayers << "\n";
 
-        stringStream << "\tSupported transforms:\n";
+        message << "\tSupported transforms:\n";
         std::vector<const char *> stringList = VulkanLogging::logTransformBits(
                 support.capabilities.supportedTransforms);
         for (const auto &line: stringList) {
-            stringStream << "\t\t" << line << '\n';
+            message << "\t\t" << line << '\n';
         }
 
-        stringStream << "\tCurrent transform:\n";
+        message << "\tCurrent transform:\n";
         stringList = VulkanLogging::logTransformBits(support.capabilities.currentTransform);
         for (const auto &line: stringList) {
-            stringStream << "\t\t" << line << '\n';
+            message << "\t\t" << line << '\n';
         }
 
-        stringStream << "\tSupported alpha operations:\n";
+        message << "\tSupported alpha operations:\n";
         stringList = VulkanLogging::logAlphaCompositeBits(support.capabilities.supportedCompositeAlpha);
         for (const auto &line: stringList) {
-            stringStream << "\t\t" << line << "\n";
+            message << "\t\t" << line << "\n";
         }
 
-        stringStream << "\tsupported image usage:\n";
+        message << "\tsupported image usage:\n";
         stringList = VulkanLogging::logImageUsageBits(support.capabilities.supportedUsageFlags);
         for (const auto &line: stringList) {
-            stringStream << "\t\t" << line << "\n";
+            message << "\t\t" << line << "\n";
         }
     }
     support.formats = device.getSurfaceFormatsKHR(surface);
 
     if (debug) {
         for (const auto &supportedFormat: support.formats) {
-            stringStream << "\tSupported pixel format: " << to_string(supportedFormat.format) << "\n";
-            stringStream << "\tSupported color space: " << to_string(supportedFormat.colorSpace) << "\n";
+            message << "\tSupported pixel format: " << to_string(supportedFormat.format) << "\n";
+            message << "\tSupported color space: " << to_string(supportedFormat.colorSpace) << "\n";
         }
     }
     support.presentModes = device.getSurfacePresentModesKHR(surface);
 
     if (debug) {
         for (const auto &presentMode: support.presentModes) {
-            stringStream << "\t" << VulkanLogging::logPresentMode(presentMode) << "\n";
+            message << "\t" << VulkanLogging::logPresentMode(presentMode) << "\n";
         }
-        std::string message = std::string(stringStream.str());
-        message.erase(message.end() - 1);
-        LOG_INFO("{}", message.c_str());
+        std::string messageStr = std::string(message.str());
+        messageStr.erase(messageStr.end() - 1);
+        LOG_INFO("{}", messageStr.c_str());
     }
     return support;
 }

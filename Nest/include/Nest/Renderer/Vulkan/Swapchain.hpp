@@ -5,8 +5,7 @@
 
 using namespace vk;
 
-class Swapchain {
-public:
+namespace Swapchain {
     struct SwapChainSupportDetails {
         SurfaceCapabilitiesKHR capabilities;
         std::vector<SurfaceFormatKHR> formats;
@@ -25,14 +24,14 @@ public:
         Extent2D extent;
     };
 
-    static SwapChainSupportDetails querySwapchainSupport(const PhysicalDevice& device, const SurfaceKHR& surface, bool debug);
+    SwapChainSupportDetails querySwapchainSupport(const PhysicalDevice& device, const SurfaceKHR& surface, bool debug);
 
-    static SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<SurfaceFormatKHR> &formats);
+    SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<SurfaceFormatKHR> &formats);
 
-    static PresentModeKHR chooseSwapchainPresentMode(const std::vector<PresentModeKHR> &presentModes);
+    PresentModeKHR chooseSwapchainPresentMode(const std::vector<PresentModeKHR> &presentModes);
 
-    static Extent2D chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceCapabilitiesKHR &capabilities);
+    Extent2D chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceCapabilitiesKHR &capabilities);
 
-    static SwapChainBundle createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, SurfaceKHR surface, int width, int height, bool debug);
+    SwapChainBundle createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, SurfaceKHR surface, int width, int height, bool debug);
 };
 

@@ -2,8 +2,12 @@
 
 #include <vector>
 #include <string>
+#include <vulkan/vulkan.hpp>
 
-class Shaders {
-public:
-    static std::vector<char> readFile(const std::string &filename, bool debug);
+using namespace vk;
+
+namespace Shaders {
+    ShaderModule createModule(const std::string &filename, const Device &logicalDevice, bool debug);
+
+    std::vector<char> readFile(const std::string &filename, bool debug);
 };

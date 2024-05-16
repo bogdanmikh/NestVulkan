@@ -5,9 +5,9 @@
 
 using namespace vk;
 
-class InstanceInit {
-public:
-    static bool supported(std::vector<const char *> &needExtensions, std::vector<const char *> &layers, bool debug);
+namespace InstanceInit {
 
-    static Instance makeInstance(const char *appName, bool debugMode);
+    bool supported(std::vector<const char *> &needExtensions, std::vector<const char *> &layers, bool debug);
+
+    Instance makeInstance(const char *appName, bool debugMode);
 };

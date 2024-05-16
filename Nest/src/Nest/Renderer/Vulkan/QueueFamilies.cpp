@@ -6,23 +6,23 @@ QueueFamilies::findQueueFamilies(const PhysicalDevice &physicalDevice, const Sur
     QueueFamilyIndices indices;
     std::vector<QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
 
-    std::ostringstream stringStream;
+    std::ostringstream message;
     if (debug) {
-        stringStream << "System can support " << queueFamilies.size() << " queue families";
+        message << "System can support " << queueFamilies.size() << " queue families";
     }
     int i = 0;
     for (const auto &queueFamily: queueFamilies) {
         if (queueFamily.queueFlags & QueueFlagBits::eGraphics) {
             indices.graphicsFamily = i;
             if (debug) {
-                stringStream << "\n\tQueue Family " << i << " is suitable for graphics";
+                message << "\n\tQueue Family " << i << " is suitable for graphics";
             }
         }
 
         if (physicalDevice.getSurfaceSupportKHR(i, surface)) {
             indices.presentFamily = i;
             if (debug) {
-                stringStream << "\n\tQueue Family " << i << " is suitable for presenting";
+                message << "\n\tQueue Family " << i << " is suitable for presenting";
             }
         }
 
@@ -32,7 +32,7 @@ QueueFamilies::findQueueFamilies(const PhysicalDevice &physicalDevice, const Sur
         i++;
     }
     if (debug) {
-        LOG_INFO("{}", stringStream.str());
+        LOG_INFO("{}", message.str());
     }
     return indices;
 }

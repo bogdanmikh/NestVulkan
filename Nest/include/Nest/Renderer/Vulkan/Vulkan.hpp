@@ -50,6 +50,5 @@ private:
     CommandBuffer mainCommandBuffer;
 
     // Synchronization objects
-    Fence inFlightFence;
-    Semaphore imageAvailable, rendererFinished;
+    int maxFramesInFlight, frameNumber;
 };

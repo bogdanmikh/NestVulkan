@@ -17,6 +17,8 @@ namespace Swapchain {
         ImageView imageView;
         Framebuffer framebuffer;
         CommandBuffer commandBuffer;
+        Semaphore imageAvailable, renderFinished;
+        Fence inFlight;
     };
 
     struct SwapChainBundle {

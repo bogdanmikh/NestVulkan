@@ -22,16 +22,14 @@
 
 using namespace vk;
 
+static std::string localPath = std::filesystem::current_path().parent_path().parent_path().parent_path().string() + "/";
+
 Vulkan::Vulkan()
         : instance(nullptr), debugMessenger(nullptr), logicalDevice(nullptr), physicalDevice(nullptr),
           graphicsQueue(nullptr), presentQueue(nullptr), swapchain(nullptr) {}
 
 Vulkan::~Vulkan() {
     logicalDevice.waitIdle();
-
-    logicalDevice.destroySemaphore(imageAvailable);
-    logicalDevice.destroySemaphore(rendererFinished);
-    logicalDevice.destroyFence(inFlightFence);
     logicalDevice.destroyCommandPool(commandPool);
 
     logicalDevice.destroyPipeline(pipeline);
@@ -41,6 +39,9 @@ Vulkan::~Vulkan() {
     for (const auto &frame: swapchainFrames) {
         logicalDevice.destroyImageView(frame.imageView);
         logicalDevice.destroyFramebuffer(frame.framebuffer);
+        logicalDevice.destroyFence(frame.inFlight);
+        logicalDevice.destroySemaphore(frame.imageAvailable);
+        logicalDevice.destroySemaphore(frame.renderFinished);
     }
 
     logicalDevice.destroySwapchainKHR(swapchain);
@@ -116,6 +117,8 @@ void Vulkan::makeDevice() {
                 swapchainFrames = bundle.frames;
                 swapchainFormat = bundle.format;
                 swapchainExtent = bundle.extent;
+                maxFramesInFlight = static_cast<int>(swapchainFrames.size());
+                frameNumber = 0;
                 return;
             }
         }
@@ -127,8 +130,6 @@ void Vulkan::makePipeline() {
     specification.device = logicalDevice;
     specification.swapchainExtent = swapchainExtent;
     specification.swapchainImageFormat = swapchainFormat;
-
-    std::string localPath = std::filesystem::current_path().parent_path().parent_path().parent_path().string() + "/";
     specification.vertexFilepath = localPath + "Nest/res/Shaders/CompileShaders/vst.spv";
     specification.fragmentFilepath = localPath + "Nest/res/Shaders/CompileShaders/fst.spv";
 
@@ -152,9 +153,11 @@ void Vulkan::finalizeSetup() {
 
     mainCommandBuffer = Commands::makeCommandBuffers(commandBufferInput, m_globalSettings.debugMode);
 
-    inFlightFence = Sync::makeFence(logicalDevice, m_globalSettings.debugMode);
-    imageAvailable = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
-    rendererFinished = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+    for (auto &frame: swapchainFrames) {
+        frame.inFlight = Sync::makeFence(logicalDevice, m_globalSettings.debugMode);
+        frame.imageAvailable = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+        frame.renderFinished = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+    }
 }
 
 void Vulkan::recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t imageIndex) {
@@ -182,7 +185,7 @@ void Vulkan::recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t ima
     commandBuffer.beginRenderPass(&renderPassInfo, SubpassContents::eInline);
     commandBuffer.bindPipeline(PipelineBindPoint::eGraphics, pipeline);
 
-    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffer.draw(6, 1, 0, 0);
 
     commandBuffer.endRenderPass();
 
@@ -196,13 +199,14 @@ void Vulkan::recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t ima
 }
 
 void Vulkan::render() {
-    logicalDevice.waitForFences(1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    logicalDevice.resetFences(1, &inFlightFence);
+    auto currentFrame = swapchainFrames[frameNumber];
+    logicalDevice.waitForFences(1, &currentFrame.inFlight, VK_TRUE, UINT64_MAX);
+    logicalDevice.resetFences(1, &currentFrame.inFlight);
 
-    // acquireNextImageKHR(SwapChainKHR, timeout, semaphore_to_signal, fence)
-    uint32_t imageIndex{logicalDevice.acquireNextImageKHR(swapchain, UINT64_MAX, imageAvailable, nullptr).value};
+//     acquireNextImageKHR(SwapChainKHR, timeout, semaphore_to_signal, fence)
+    uint32_t imageIndex = logicalDevice.acquireNextImageKHR(swapchain, UINT64_MAX, currentFrame.imageAvailable, nullptr).value;
 
-    CommandBuffer commandBuffer = swapchainFrames[imageIndex].commandBuffer;
+    CommandBuffer commandBuffer = currentFrame.commandBuffer;
 
     commandBuffer.reset();
 
@@ -210,7 +214,7 @@ void Vulkan::render() {
 
     SubmitInfo submitInfo;
 
-    Semaphore waitSemaphores[] = { imageAvailable };
+    Semaphore waitSemaphores[] = { currentFrame.imageAvailable };
     PipelineStageFlags waitStages[] = { PipelineStageFlagBits::eColorAttachmentOutput };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -219,14 +223,13 @@ void Vulkan::render() {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    Semaphore signalSemaphores[] = { rendererFinished };
+    Semaphore signalSemaphores[] = { currentFrame.renderFinished };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     try {
-        graphicsQueue.submit(submitInfo, inFlightFence);
+        graphicsQueue.submit(submitInfo, currentFrame.inFlight);
     } catch (const SystemError &err) {
-
         if (m_globalSettings.debugMode) {
             LOG_ERROR("Failed to submit draw command buffer!\n{}", err.what());
         }
@@ -242,4 +245,6 @@ void Vulkan::render() {
     presentInfo.pImageIndices = &imageIndex;
 
     presentQueue.presentKHR(presentInfo);
+
+    frameNumber = (frameNumber + 1) % maxFramesInFlight;
 }

@@ -1,17 +1,20 @@
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Settings/SettingsLog.hpp"
 #include "Nest/Renderer/Vulkan/Swapchain.hpp"
 #include "Nest/Renderer/Vulkan/Logging.hpp"
 #include "Nest/Renderer/Vulkan/QueueFamilies.hpp"
 
-Swapchain::SwapChainSupportDetails
-Swapchain::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR &surface, bool debug) {
+SwapChainSupportDetails
+querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR &surface) {
     SwapChainSupportDetails support;
     support.capabilities = device.getSurfaceCapabilitiesKHR(surface);
 
+    bool debug = VK_PRINT_SWAPCHAIN_INFO;
     std::ostringstream message;
     if (debug) {
-        message << "\n\tMinimum image count:" << support.capabilities.minImageCount << "\n";
-        message << "\tMaximum image count:" << support.capabilities.maxImageCount << "\n";
+        message << "Swapchain INFO:\n";
+        message << "\n\tMinimum image count: " << support.capabilities.minImageCount << "\n";
+        message << "\tMaximum image count: " << support.capabilities.maxImageCount << "\n";
 
         message << "\t\tWidth: " << support.capabilities.currentExtent.width << "\n";
         message << "\t\tHeight: " << support.capabilities.currentExtent.height << "\n";
@@ -27,26 +30,26 @@ Swapchain::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR 
         message << "\tMaximum image array layers: " << support.capabilities.maxImageArrayLayers << "\n";
 
         message << "\tSupported transforms:\n";
-        std::vector<const char *> stringList = VulkanLogging::logTransformBits(
+        std::vector<const char *> stringList = logTransformBits(
                 support.capabilities.supportedTransforms);
         for (const auto &line: stringList) {
             message << "\t\t" << line << '\n';
         }
 
         message << "\tCurrent transform:\n";
-        stringList = VulkanLogging::logTransformBits(support.capabilities.currentTransform);
+        stringList = logTransformBits(support.capabilities.currentTransform);
         for (const auto &line: stringList) {
             message << "\t\t" << line << '\n';
         }
 
         message << "\tSupported alpha operations:\n";
-        stringList = VulkanLogging::logAlphaCompositeBits(support.capabilities.supportedCompositeAlpha);
+        stringList = logAlphaCompositeBits(support.capabilities.supportedCompositeAlpha);
         for (const auto &line: stringList) {
             message << "\t\t" << line << "\n";
         }
 
         message << "\tsupported image usage:\n";
-        stringList = VulkanLogging::logImageUsageBits(support.capabilities.supportedUsageFlags);
+        stringList = logImageUsageBits(support.capabilities.supportedUsageFlags);
         for (const auto &line: stringList) {
             message << "\t\t" << line << "\n";
         }
@@ -63,7 +66,7 @@ Swapchain::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR 
 
     if (debug) {
         for (const auto &presentMode: support.presentModes) {
-            message << "\t" << VulkanLogging::logPresentMode(presentMode) << "\n";
+            message << "\t" << logPresentMode(presentMode) << "\n";
         }
         std::string messageStr = std::string(message.str());
         messageStr.erase(messageStr.end() - 1);
@@ -72,7 +75,7 @@ Swapchain::querySwapchainSupport(const PhysicalDevice &device, const SurfaceKHR 
     return support;
 }
 
-SurfaceFormatKHR Swapchain::chooseSwapchainSurfaceFormat(const std::vector<SurfaceFormatKHR> &formats) {
+SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<SurfaceFormatKHR> &formats) {
     for (const auto &format: formats) {
         // color format an 0-255, non linear
         if (format.format == Format::eB8G8R8A8Unorm
@@ -83,7 +86,7 @@ SurfaceFormatKHR Swapchain::chooseSwapchainSurfaceFormat(const std::vector<Surfa
     return formats[0];
 }
 
-PresentModeKHR Swapchain::chooseSwapchainPresentMode(const std::vector<PresentModeKHR> &presentModes) {
+PresentModeKHR chooseSwapchainPresentMode(const std::vector<PresentModeKHR> &presentModes) {
     for (const auto &presentMode: presentModes) {
         // rendering mode
         if (presentMode == PresentModeKHR::eMailbox) {
@@ -94,7 +97,7 @@ PresentModeKHR Swapchain::chooseSwapchainPresentMode(const std::vector<PresentMo
 }
 
 Extent2D
-Swapchain::chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceCapabilitiesKHR &capabilities) {
+chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceCapabilitiesKHR &capabilities) {
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     } else {
@@ -114,10 +117,10 @@ Swapchain::chooseSwapchainExtent(uint32_t width, uint32_t height, const SurfaceC
     }
 }
 
-Swapchain::SwapChainBundle
-Swapchain::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, SurfaceKHR surface, int width,
-                            int height, bool debug) {
-    SwapChainSupportDetails support = querySwapchainSupport(physicalDevice, surface, debug);
+SwapChainBundle
+createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, SurfaceKHR surface, int width,
+                int height, SwapchainKHR *oldSwapchain) {
+    SwapChainSupportDetails support = querySwapchainSupport(physicalDevice, surface);
 
     SurfaceFormatKHR format = chooseSwapchainSurfaceFormat(support.formats);
 
@@ -129,7 +132,8 @@ Swapchain::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, 
     if (support.capabilities.maxImageCount == 0) {
         imageCount = std::min(int(support.capabilities.minImageCount + 1), 3);
     } else {
-        imageCount = std::min(std::min((int)support.capabilities.minImageCount + 1, 3), (int)support.capabilities.maxImageCount);
+        imageCount = std::min(std::min((int) support.capabilities.minImageCount + 1, 3),
+                              (int) support.capabilities.maxImageCount);
     }
 
     SwapchainCreateInfoKHR createInfo;
@@ -142,7 +146,7 @@ Swapchain::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, 
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = ImageUsageFlagBits::eColorAttachment;
 
-    QueueFamilies::QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(physicalDevice, surface, debug);
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     if (indices.graphicsFamily != indices.presentFamily) {
@@ -158,13 +162,20 @@ Swapchain::createSwapchain(Device logicalDevice, PhysicalDevice physicalDevice, 
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
 
-    createInfo.oldSwapchain = SwapchainKHR(nullptr);
+    if (oldSwapchain != nullptr) {
+        createInfo.setOldSwapchain(*oldSwapchain);
+//        createInfo.oldSwapchain = SwapchainKHR(nullptr);
+    } else {
+        createInfo.oldSwapchain = SwapchainKHR(nullptr);
+    }
 
     SwapChainBundle bundle{};
     try {
         bundle.swapchain = logicalDevice.createSwapchainKHR(createInfo);
     } catch (const SystemError &err) {
-        LOG_CRITICAL("Failed to create Swapchain!");
+        if (VK_PRINT_SWAPCHAIN_INFO) {
+            LOG_CRITICAL("Failed to create Swapchain!\n", err.what());
+        }
     }
 
     std::vector<Image> images = logicalDevice.getSwapchainImagesKHR(bundle.swapchain);

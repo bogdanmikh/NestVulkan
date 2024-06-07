@@ -1,12 +1,14 @@
 #include "Nest/Renderer/Vulkan/QueueFamilies.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Settings/SettingsLog.hpp"
 
-QueueFamilies::QueueFamilyIndices
-QueueFamilies::findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
+QueueFamilyIndices
+findQueueFamilies(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface) {
     QueueFamilyIndices indices;
     std::vector<QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
 
     std::ostringstream message;
+    bool debug = VK_PRINT_SUPPORT_QUEUE;
     if (debug) {
         message << "System can support " << queueFamilies.size() << " queue families";
     }

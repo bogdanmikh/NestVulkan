@@ -5,12 +5,10 @@
 
 using namespace vk;
 
-namespace FrameBufferInit {
-    struct FramebufferInput {
-        Device device;
-        RenderPass renderPass;
-        Extent2D swapchainExtent;
-    };
+struct FramebufferInput {
+    Device device;
+    RenderPass renderPass;
+    Extent2D swapchainExtent;
+};
 
-    void makeFrameBuffers(const FramebufferInput &inputChunk, std::vector<Swapchain::SwapChainFrame> &frames, bool debug);
-}
+void makeFrameBuffers(const FramebufferInput &inputChunk, std::vector<SwapChainFrame> &frames, bool debug);

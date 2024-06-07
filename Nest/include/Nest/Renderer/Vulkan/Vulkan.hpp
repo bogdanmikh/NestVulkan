@@ -12,14 +12,25 @@ using namespace vk;
 class Vulkan final : public Renderer {
 public:
     Vulkan();
+
     ~Vulkan() override;
+
     void init(const GlobalSettings &globalSettings) override;
     void render() override;
 private:
     void makeInstance();
+
     void makeDevice();
+    void makeSwapchain();
+    void recreateSwapchain();
+    void cleanupSwapchain();
+
     void makePipeline();
+
     void finalizeSetup();
+    void makeFramebuffer();
+    void makeFrameSync();
+
     void recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t imageIndex);
 
     GlobalSettings m_globalSettings;
@@ -36,7 +47,7 @@ private:
     Queue graphicsQueue;
     Queue presentQueue;
     SwapchainKHR swapchain;
-    std::vector<Swapchain::SwapChainFrame> swapchainFrames;
+    std::vector<SwapChainFrame> swapchainFrames;
     Format swapchainFormat;
     Extent2D swapchainExtent;
 

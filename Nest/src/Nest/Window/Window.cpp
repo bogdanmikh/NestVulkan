@@ -26,6 +26,8 @@ void Window::init(const char *name, int resolutionX, int resolutionY, bool fullS
     // set min size
     glfwSetWindowSizeLimits(window, 640,480, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
+//    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+
     if (!window) {
         LOG_CRITICAL("GLFW window creation failed");
         glfwTerminate();

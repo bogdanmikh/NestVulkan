@@ -5,22 +5,21 @@
 #include <vector>
 #include <sstream>
 
-PipelineLayout PipelineInit::makePipelineLayout(const Device &device, bool debug) {
+PipelineLayout makePipelineLayout(const Device &device, bool debug) {
     PipelineLayoutCreateInfo layoutInfo;
     layoutInfo.flags = PipelineLayoutCreateFlags();
     layoutInfo.setLayoutCount = 0;
     layoutInfo.pushConstantRangeCount = 0;
     try {
         return device.createPipelineLayout(layoutInfo);
-    }
-    catch (const SystemError &err) {
+    } catch (const SystemError &err) {
         if (debug) {
             LOG_ERROR("Failed to create pipeline layout!\n{}", err.what());
         }
     }
 }
 
-RenderPass PipelineInit::makeRenderpass(const Device &device, const Format &swapchainImageFormat, bool debug) {
+RenderPass makeRenderpass(const Device &device, const Format &swapchainImageFormat, bool debug) {
     // Define a general attachment, with its load/store operations
     AttachmentDescription colorAttachment;
     colorAttachment.flags = AttachmentDescriptionFlags();
@@ -61,14 +60,14 @@ RenderPass PipelineInit::makeRenderpass(const Device &device, const Format &swap
     }
 }
 
-PipelineInit::GraphicsPipelineOutBundle
-PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle &specification, bool debug) {
+GraphicsPipelineOutBundle
+makeGraphicsPipeline(const GraphicsPipelineInBundle &specification, bool debug) {
     // The info for the graphics pipeline
     GraphicsPipelineCreateInfo pipelineCreateInfo;
     pipelineCreateInfo.flags = PipelineCreateFlags();
 
     // Shader stages, to be populated later
-    std::vector <PipelineShaderStageCreateInfo> shaderStages;
+    std::vector<PipelineShaderStageCreateInfo> shaderStages;
 
     // Vertex Input
     PipelineVertexInputStateCreateInfo vertexInputInfo;
@@ -87,7 +86,7 @@ PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle 
     if (debug) {
         LOG_INFO("Create vertex shader module");
     }
-    ShaderModule vertexShader = Shaders::createModule(
+    ShaderModule vertexShader = createModule(
             specification.vertexFilepath, specification.device, debug
     );
     PipelineShaderStageCreateInfo vertexShaderInfo;
@@ -133,7 +132,7 @@ PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle 
     if (debug) {
         LOG_INFO("Create fragment shader module");
     }
-    ShaderModule fragmentShader = Shaders::createModule(
+    ShaderModule fragmentShader = createModule(
             specification.fragmentFilepath, specification.device, debug
     );
     PipelineShaderStageCreateInfo fragmentShaderInfo;
@@ -203,7 +202,7 @@ PipelineInit::makeGraphicsPipeline(const PipelineInit::GraphicsPipelineInBundle 
         }
     }
 
-    PipelineInit::GraphicsPipelineOutBundle output;
+    GraphicsPipelineOutBundle output;
     output.layout = pipelineLayout;
     output.renderPass = renderPass;
     output.pipeline = graphicsPipeline;

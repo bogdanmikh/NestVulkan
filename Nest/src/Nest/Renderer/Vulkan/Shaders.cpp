@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-std::vector<char> Shaders::readFile(const std::string &filename, bool debug) {
+std::vector<char> readFile(const std::string &filename, bool debug) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
     if (debug && !file.is_open()) {
@@ -13,7 +13,7 @@ std::vector<char> Shaders::readFile(const std::string &filename, bool debug) {
         stringStream << "Failed to load \"" << filename << "\"";
         LOG_ERROR("{}", stringStream.str());
     }
-    size_t filesize{ static_cast<size_t>(file.tellg()) };
+    size_t filesize{static_cast<size_t>(file.tellg())};
 
     std::vector<char> buffer(filesize);
     file.seekg(0);
@@ -23,12 +23,12 @@ std::vector<char> Shaders::readFile(const std::string &filename, bool debug) {
     return buffer;
 }
 
-ShaderModule Shaders::createModule(const std::string &filename, const Device &logicalDevice, bool debug) {
+ShaderModule createModule(const std::string &filename, const Device &logicalDevice, bool debug) {
     std::vector<char> sourceCode = readFile(filename, debug);
     ShaderModuleCreateInfo moduleInfo = {};
     moduleInfo.flags = ShaderModuleCreateFlags();
     moduleInfo.codeSize = sourceCode.size();
-    moduleInfo.pCode = reinterpret_cast<const uint32_t*>(sourceCode.data());
+    moduleInfo.pCode = reinterpret_cast<const uint32_t *>(sourceCode.data());
 
     try {
         return logicalDevice.createShaderModule(moduleInfo);

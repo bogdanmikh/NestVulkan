@@ -6,10 +6,11 @@
 #include "Nest/Renderer/Vulkan/QueueFamilies.hpp"
 #include "Nest/Platform/PlatformDetection.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Settings/SettingsLog.hpp"
 
 using namespace vk;
 
-std::array<bool, 5> DeviceInit::getDeviceProperties(const PhysicalDevice &device) {
+std::array<bool, 5> getDeviceProperties(const PhysicalDevice &device) {
     PhysicalDeviceProperties properties = device.getProperties();
 
     std::array<bool, 5> typeGPU{false};
@@ -29,9 +30,10 @@ std::array<bool, 5> DeviceInit::getDeviceProperties(const PhysicalDevice &device
     return typeGPU;
 }
 
-bool DeviceInit::checkDeviceExtensionSupport(const PhysicalDevice &device,
-                                             const std::vector<const char *> &requestedExtensions, bool debug) {
+bool checkDeviceExtensionSupport(const PhysicalDevice &device,
+                                 const std::vector<const char *> &requestedExtensions) {
 //    Check if a given physical device can satisfy a list of requested device extensions.
+    bool debug = VK_PRINT_DEVICE_SUPPORT_EXTENTIONS;
     std::set<std::string> requiredExtensions(requestedExtensions.begin(), requestedExtensions.end());
 
     std::ostringstream message;
@@ -53,7 +55,7 @@ bool DeviceInit::checkDeviceExtensionSupport(const PhysicalDevice &device,
     return requiredExtensions.empty();
 }
 
-bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
+bool isSuitable(const PhysicalDevice &device) {
     std::ostringstream message;
     message << "Checking if device is suitable";
     std::vector<const char *> requestedExtensions;
@@ -61,6 +63,7 @@ bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
 #ifdef PLATFORM_MACOS
     requestedExtensions.emplace_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
+    bool debug = VK_PRINT_DEVICE_SUPPORT_EXTENTIONS;
     if (debug) {
         message << "\n\tWe are requesting device extensions:";
 
@@ -69,7 +72,7 @@ bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
         }
     }
 
-    bool extensionsSupported = checkDeviceExtensionSupport(device, requestedExtensions, debug);
+    bool extensionsSupported = checkDeviceExtensionSupport(device, requestedExtensions);
     if (extensionsSupported) {
         if (debug) {
             message << "\n\tDevice can support the requested extensions!";
@@ -86,14 +89,13 @@ bool DeviceInit::isSuitable(const PhysicalDevice &device, bool debug) {
 }
 
 
-Device DeviceInit::createLogicalDevice(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
-    QueueFamilies::QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(physicalDevice, surface, debug);
+Device createLogicalDevice(const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug) {
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
     std::vector<uint32_t> uniqueIndices;
     uniqueIndices.emplace_back(indices.graphicsFamily.value());
     if (indices.graphicsFamily.value() != indices.presentFamily.value()) {
         uniqueIndices.emplace_back(indices.presentFamily.value());
     }
-
     float queuePriority = 1.0f;
 
     std::vector<DeviceQueueCreateInfo> queueCreateInfo;
@@ -144,9 +146,9 @@ Device DeviceInit::createLogicalDevice(const PhysicalDevice &physicalDevice, con
 }
 
 std::array<Queue, 2>
-DeviceInit::getQueues(const PhysicalDevice &physicalDevice, const Device &device, const SurfaceKHR &surface,
-                      bool debug) {
-    QueueFamilies::QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(physicalDevice, surface, false);
+getQueues(const PhysicalDevice &physicalDevice, const Device &device, const SurfaceKHR &surface,
+          bool debug) {
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
 
     return {
             device.getQueue(indices.graphicsFamily.value(), 0),

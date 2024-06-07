@@ -9,8 +9,8 @@ using namespace vk;
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData) {
+        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+        void *pUserData) {
     std::ostringstream message;
     message << "Validation layer: ";
     message << pCallbackData->pMessage;
@@ -18,21 +18,25 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     return VK_FALSE;
 }
 
-DebugUtilsMessengerEXT VulkanLogging::makeDebugMessenger(const Instance& instance, const DispatchLoaderDynamic& dld) {
+DebugUtilsMessengerEXT makeDebugMessenger(const Instance &instance, const DispatchLoaderDynamic &dld) {
     DebugUtilsMessengerCreateInfoEXT createInfo;
     createInfo.flags = DebugUtilsMessengerCreateFlagsEXT();
-    createInfo.messageSeverity = DebugUtilsMessageSeverityFlagBitsEXT::eWarning | DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    createInfo.messageType = DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation | DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+    createInfo.messageSeverity =
+            DebugUtilsMessageSeverityFlagBitsEXT::eWarning | DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    createInfo.messageType =
+            DebugUtilsMessageTypeFlagBitsEXT::eGeneral | DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+            DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     createInfo.pfnUserCallback = &debugCallback;
     createInfo.pUserData = nullptr;
     return instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dld);
 }
 
 
-void VulkanLogging::logDeviceProperties(const PhysicalDevice &device, const std::array<bool, 5> &types) {
+void logDeviceProperties(const PhysicalDevice &device, const std::array<bool, 5> &types) {
     std::ostringstream message;
-    message << "\n\tDevice name: " << static_cast<const char*>(device.getProperties().deviceName) << "\n\tDevice type:";
-    std::array<const char*, 5> allTypes{
+    message << "\n\tDevice name: " << static_cast<const char *>(device.getProperties().deviceName)
+            << "\n\tDevice type:";
+    std::array<const char *, 5> allTypes{
             "Discrete GPU", "Integrated GPU", "Virtual GPU", "CPU", "Other"
     };
     for (int i = 0; i < 5; ++i) {
@@ -43,8 +47,8 @@ void VulkanLogging::logDeviceProperties(const PhysicalDevice &device, const std:
     LOG_INFO("{}", message.str());
 }
 
-std::vector<const char *> VulkanLogging::logTransformBits(const SurfaceTransformFlagsKHR &bits) {
-    std::vector<const char*> result;
+std::vector<const char *> logTransformBits(const SurfaceTransformFlagsKHR &bits) {
+    std::vector<const char *> result;
     if (bits & SurfaceTransformFlagBitsKHR::eIdentity) {
         result.emplace_back("identity");
     }
@@ -77,8 +81,8 @@ std::vector<const char *> VulkanLogging::logTransformBits(const SurfaceTransform
 }
 
 
-std::vector<const char*> VulkanLogging::logAlphaCompositeBits(const CompositeAlphaFlagsKHR& bits) {
-    std::vector<const char*> result;
+std::vector<const char *> logAlphaCompositeBits(const CompositeAlphaFlagsKHR &bits) {
+    std::vector<const char *> result;
     if (bits & CompositeAlphaFlagBitsKHR::eOpaque) {
         result.emplace_back("opaque (alpha ignored)");
     }
@@ -95,7 +99,7 @@ std::vector<const char*> VulkanLogging::logAlphaCompositeBits(const CompositeAlp
     return result;
 }
 
-std::vector<const char *> VulkanLogging::logImageUsageBits(const ImageUsageFlags& bits) {
+std::vector<const char *> logImageUsageBits(const ImageUsageFlags &bits) {
     std::vector<const char *> result;
     if (bits & ImageUsageFlagBits::eTransferSrc) {
         result.push_back("transfer src: image can be used as the source of a transfer command.");
@@ -142,7 +146,7 @@ suitable for use as a fragment shading rate attachment or shading rate image");
     return result;
 }
 
-const char *VulkanLogging::logPresentMode(const PresentModeKHR &presentMode) {
+const char *logPresentMode(const PresentModeKHR &presentMode) {
     if (presentMode == PresentModeKHR::eImmediate) {
         return "immediate: the presentation engine does not wait for a vertical blanking period \
 to update the current image, meaning this mode may result in visible tearing. No internal \

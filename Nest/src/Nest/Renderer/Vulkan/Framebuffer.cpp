@@ -1,11 +1,12 @@
 #include "Nest/Renderer/Vulkan/Framebuffer.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Settings/SettingsLog.hpp"
 
 using namespace vk;
 
 void
-FrameBufferInit::makeFrameBuffers(const FramebufferInput &inputChunk,
-                                  std::vector<Swapchain::SwapChainFrame> &frames, bool debug) {
+makeFrameBuffers(const FramebufferInput &inputChunk,
+                 std::vector<SwapChainFrame> &frames, bool debug) {
     for (int i = 0; i < frames.size(); ++i) {
         std::vector<ImageView> attachments = {
                 frames[i].imageView
@@ -22,11 +23,11 @@ FrameBufferInit::makeFrameBuffers(const FramebufferInput &inputChunk,
 
         try {
             frames[i].framebuffer = inputChunk.device.createFramebuffer(framebufferInfo);
-            if (debug) {
+            if (VK_PRINT_GRAPTHICS_PIPELINE_INFO) {
                 LOG_INFO("Created framebuffer for frame {}", i);
             }
         } catch (const SystemError &err) {
-            if (debug) {
+            if (VK_PRINT_GRAPTHICS_PIPELINE_INFO) {
                 LOG_ERROR("Failed to create framebuffer for frame {}\n{}", i, err.what());
             }
         }

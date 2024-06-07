@@ -8,8 +8,9 @@
 #include <filesystem>
 #include <set>
 
-#include "Nest/Application/Application.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Settings/SettingsLog.hpp"
+#include "Nest/Application/Application.hpp"
 #include "Nest/Renderer/Vulkan/Vulkan.hpp"
 #include "Nest/Renderer/Vulkan/Device.hpp"
 #include "Nest/Renderer/Vulkan/Instance.hpp"
@@ -36,18 +37,11 @@ Vulkan::~Vulkan() {
     logicalDevice.destroyPipelineLayout(pipelineLayout);
     logicalDevice.destroyRenderPass(renderPass);
 
-    for (const auto &frame: swapchainFrames) {
-        logicalDevice.destroyImageView(frame.imageView);
-        logicalDevice.destroyFramebuffer(frame.framebuffer);
-        logicalDevice.destroyFence(frame.inFlight);
-        logicalDevice.destroySemaphore(frame.imageAvailable);
-        logicalDevice.destroySemaphore(frame.renderFinished);
-    }
+    cleanupSwapchain();
 
-    logicalDevice.destroySwapchainKHR(swapchain);
     logicalDevice.destroy();
     instance.destroySurfaceKHR(surface);
-    if (m_globalSettings.debugMode) {
+    if (VK_PRINT_INSTANCE_INFO) {
         instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dld);
     }
     instance.destroy();
@@ -62,31 +56,33 @@ void Vulkan::init(const GlobalSettings &globalSettings) {
 }
 
 void Vulkan::makeInstance() {
-    instance = InstanceInit::makeInstance(m_globalSettings.appName.c_str(), m_globalSettings.debugMode);
+    instance = makeInstanceVulkan(m_globalSettings.appName.c_str());
     dld = DispatchLoaderDynamic(instance, vkGetInstanceProcAddr);
-    if (m_globalSettings.debugMode) {
-        debugMessenger = VulkanLogging::makeDebugMessenger(instance, dld);
+    bool debug = VK_PRINT_INSTANCE_INFO;
+    if (debug) {
+        debugMessenger = makeDebugMessenger(instance, dld);
     }
     VkSurfaceKHR cStyleSurface;
     auto *window = static_cast<GLFWwindow *>(Application::getInstance()->getWindow()->getNativeHandle());
     VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &cStyleSurface);
     if (result != VK_SUCCESS) {
-        if (m_globalSettings.debugMode) {
+        if (debug) {
             LOG_CRITICAL("Failed to abstract the glfw surface for Vulkan");
         }
-    } else if (m_globalSettings.debugMode) {
-        LOG_INFO("Successfully abstracted glfw surface for Vulkan");
+    } else if (debug) {
+        LOG_INFO("Successfully abstracted GLFW surface for Vulkan");
     }
     surface = cStyleSurface;
 }
 
 void Vulkan::makeDevice() {
-    if (m_globalSettings.debugMode) {
+    bool debug = VK_PRINT_DEVICE_INFO;
+    if (debug) {
         LOG_INFO("Choosing physical device...");
     }
     std::vector<PhysicalDevice> availableDevices = instance.enumeratePhysicalDevices();
 
-    if (m_globalSettings.debugMode) {
+    if (debug) {
         std::ostringstream message;
         message << "There are: " << availableDevices.size() << " physical devices available on the system";
         LOG_INFO("{}", message.str());
@@ -94,30 +90,22 @@ void Vulkan::makeDevice() {
 
     std::vector<std::array<bool, 5>> devicesTypes;
     for (const auto &device: availableDevices) {
-        devicesTypes.emplace_back(DeviceInit::getDeviceProperties(device));
+        devicesTypes.emplace_back(getDeviceProperties(device));
     }
 
     for (int numType = 0; numType < 5; ++numType) {
         for (int numDevice = 0; numDevice < availableDevices.size(); ++numDevice) {
             if (devicesTypes[numDevice][numType] &&
-                DeviceInit::isSuitable(availableDevices[numDevice], m_globalSettings.debugMode)) {
-                if (m_globalSettings.debugMode) {
-                    VulkanLogging::logDeviceProperties(availableDevices[numDevice], devicesTypes[numDevice]);
+                isSuitable(availableDevices[numDevice])) {
+                if (VK_PRINT_SELECTED_DEVICE_INFO) {
+                    logDeviceProperties(availableDevices[numDevice], devicesTypes[numDevice]);
                 }
                 physicalDevice = availableDevices[numDevice];
-                logicalDevice = DeviceInit::createLogicalDevice(physicalDevice, surface, m_globalSettings.debugMode);
-                auto queue = DeviceInit::getQueues(physicalDevice, logicalDevice, surface, m_globalSettings.debugMode);
+                logicalDevice = createLogicalDevice(physicalDevice, surface, m_globalSettings.debugMode);
+                auto queue = getQueues(physicalDevice, logicalDevice, surface, m_globalSettings.debugMode);
                 graphicsQueue = queue[0];
                 presentQueue = queue[1];
-                Swapchain::SwapChainBundle bundle = Swapchain::createSwapchain(logicalDevice, physicalDevice, surface,
-                                                                               m_globalSettings.resolutionX,
-                                                                               m_globalSettings.resolutionY,
-                                                                               m_globalSettings.debugMode);
-                swapchain = bundle.swapchain;
-                swapchainFrames = bundle.frames;
-                swapchainFormat = bundle.format;
-                swapchainExtent = bundle.extent;
-                maxFramesInFlight = static_cast<int>(swapchainFrames.size());
+                makeSwapchain();
                 frameNumber = 0;
                 return;
             }
@@ -125,38 +113,97 @@ void Vulkan::makeDevice() {
     }
 }
 
+void Vulkan::makeSwapchain() {
+    SwapChainBundle bundle = createSwapchain(logicalDevice, physicalDevice, surface,
+                                 m_globalSettings.resolutionX,
+                                 m_globalSettings.resolutionY);
+    swapchain = bundle.swapchain;
+    swapchainFrames = bundle.frames;
+    swapchainFormat = bundle.format;
+    swapchainExtent = bundle.extent;
+    maxFramesInFlight = static_cast<int>(swapchainFrames.size());
+}
+
+void Vulkan::recreateSwapchain() {
+//    m_globalSettings.resolutionX = 0;
+//    m_globalSettings.resolutionY = 0;
+    while (m_globalSettings.resolutionX == 0 || m_globalSettings.resolutionY == 0) {
+        glfwGetFramebufferSize((GLFWwindow *) Application::getInstance()->getWindow()->getNativeHandle(),
+                               &m_globalSettings.resolutionX, &m_globalSettings.resolutionY);
+        glfwWaitEvents();
+    }
+    logicalDevice.waitIdle();
+
+    SwapChainBundle bundle = createSwapchain(logicalDevice, physicalDevice, surface,
+                                 m_globalSettings.resolutionX,
+                                 m_globalSettings.resolutionY, &swapchain);
+    cleanupSwapchain();
+    swapchain = bundle.swapchain;
+    swapchainFrames = bundle.frames;
+    swapchainFormat = bundle.format;
+    swapchainExtent = bundle.extent;
+    maxFramesInFlight = static_cast<int>(swapchainFrames.size());
+    makeFramebuffer();
+    makeFrameSync();
+    commandPool = makeCommandPool(logicalDevice, physicalDevice, surface, m_globalSettings.debugMode);
+
+    CommandBufferInputChunk commandBufferInput = {logicalDevice, commandPool, swapchainFrames};
+    makeFrameCommandBuffers(commandBufferInput);
+
+}
+
+void Vulkan::cleanupSwapchain() {
+    for (const auto &frame: swapchainFrames) {
+        logicalDevice.destroyImageView(frame.imageView);
+        logicalDevice.destroyFramebuffer(frame.framebuffer);
+        logicalDevice.destroyFence(frame.inFlight);
+        logicalDevice.destroySemaphore(frame.imageAvailable);
+        logicalDevice.destroySemaphore(frame.renderFinished);
+    }
+
+    logicalDevice.destroySwapchainKHR(swapchain);
+}
+
 void Vulkan::makePipeline() {
-    PipelineInit::GraphicsPipelineInBundle specification;
+    GraphicsPipelineInBundle specification;
     specification.device = logicalDevice;
     specification.swapchainExtent = swapchainExtent;
     specification.swapchainImageFormat = swapchainFormat;
     specification.vertexFilepath = localPath + "Nest/res/Shaders/CompileShaders/vst.spv";
     specification.fragmentFilepath = localPath + "Nest/res/Shaders/CompileShaders/fst.spv";
 
-    PipelineInit::GraphicsPipelineOutBundle output = PipelineInit::makeGraphicsPipeline(specification,
-                                                                                        m_globalSettings.debugMode);
+    GraphicsPipelineOutBundle output = makeGraphicsPipeline(specification,
+                                                            m_globalSettings.debugMode);
     pipeline = output.pipeline;
     pipelineLayout = output.layout;
     renderPass = output.renderPass;
 }
 
 void Vulkan::finalizeSetup() {
-    FrameBufferInit::FramebufferInput framebufferInput;
+    makeFramebuffer();
+    commandPool = makeCommandPool(logicalDevice, physicalDevice, surface, m_globalSettings.debugMode);
+
+    CommandBufferInputChunk commandBufferInput = {logicalDevice, commandPool, swapchainFrames};
+
+    mainCommandBuffer = makeCommandBuffer(commandBufferInput);
+    makeFrameCommandBuffers(commandBufferInput);
+
+    makeFrameSync();
+}
+
+void Vulkan::makeFramebuffer() {
+    FramebufferInput framebufferInput;
     framebufferInput.device = logicalDevice;
     framebufferInput.renderPass = renderPass;
     framebufferInput.swapchainExtent = swapchainExtent;
-    FrameBufferInit::makeFrameBuffers(framebufferInput, swapchainFrames, m_globalSettings.debugMode);
+    makeFrameBuffers(framebufferInput, swapchainFrames, m_globalSettings.debugMode);
+}
 
-    commandPool = Commands::makeCommandPool(logicalDevice, physicalDevice, surface, m_globalSettings.debugMode);
-
-    Commands::CommandBufferInputChunk commandBufferInput = {logicalDevice, commandPool, swapchainFrames};
-
-    mainCommandBuffer = Commands::makeCommandBuffers(commandBufferInput, m_globalSettings.debugMode);
-
+void Vulkan::makeFrameSync() {
     for (auto &frame: swapchainFrames) {
-        frame.inFlight = Sync::makeFence(logicalDevice, m_globalSettings.debugMode);
-        frame.imageAvailable = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
-        frame.renderFinished = Sync::makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+        frame.inFlight = makeFence(logicalDevice, m_globalSettings.debugMode);
+        frame.imageAvailable = makeSemaphore(logicalDevice, m_globalSettings.debugMode);
+        frame.renderFinished = makeSemaphore(logicalDevice, m_globalSettings.debugMode);
     }
 }
 
@@ -185,7 +232,7 @@ void Vulkan::recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t ima
     commandBuffer.beginRenderPass(&renderPassInfo, SubpassContents::eInline);
     commandBuffer.bindPipeline(PipelineBindPoint::eGraphics, pipeline);
 
-    commandBuffer.draw(6, 1, 0, 0);
+    commandBuffer.draw(3, 1, 0, 0);
 
     commandBuffer.endRenderPass();
 
@@ -201,10 +248,27 @@ void Vulkan::recordDrawCommands(const CommandBuffer &commandBuffer, uint32_t ima
 void Vulkan::render() {
     auto currentFrame = swapchainFrames[frameNumber];
     logicalDevice.waitForFences(1, &currentFrame.inFlight, VK_TRUE, UINT64_MAX);
-    logicalDevice.resetFences(1, &currentFrame.inFlight);
 
 //     acquireNextImageKHR(SwapChainKHR, timeout, semaphore_to_signal, fence)
-    uint32_t imageIndex = logicalDevice.acquireNextImageKHR(swapchain, UINT64_MAX, currentFrame.imageAvailable, nullptr).value;
+
+    uint32_t imageIndex;
+    try {
+        ResultValue acquire = logicalDevice.acquireNextImageKHR(
+                swapchain, UINT64_MAX,
+                swapchainFrames[frameNumber].imageAvailable, nullptr
+        );
+        imageIndex = acquire.value;
+    } catch (const OutOfDateKHRError& error) {
+        LOG_INFO("Recreate Swapchain");
+        recreateSwapchain();
+        return;
+    } catch (const IncompatibleDisplayKHRError& error) {
+        LOG_INFO("Recreate Swapchain");
+        recreateSwapchain();
+        return;
+    } catch (const SystemError &error) {
+        LOG_ERROR("Failed to acquire swapchain image!");
+    }
 
     CommandBuffer commandBuffer = currentFrame.commandBuffer;
 
@@ -214,8 +278,8 @@ void Vulkan::render() {
 
     SubmitInfo submitInfo;
 
-    Semaphore waitSemaphores[] = { currentFrame.imageAvailable };
-    PipelineStageFlags waitStages[] = { PipelineStageFlagBits::eColorAttachmentOutput };
+    Semaphore waitSemaphores[] = {currentFrame.imageAvailable};
+    PipelineStageFlags waitStages[] = {PipelineStageFlagBits::eColorAttachmentOutput};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
@@ -223,10 +287,11 @@ void Vulkan::render() {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    Semaphore signalSemaphores[] = { currentFrame.renderFinished };
+    Semaphore signalSemaphores[] = {currentFrame.renderFinished};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
+    logicalDevice.resetFences(1, &currentFrame.inFlight);
     try {
         graphicsQueue.submit(submitInfo, currentFrame.inFlight);
     } catch (const SystemError &err) {
@@ -239,12 +304,22 @@ void Vulkan::render() {
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    SwapchainKHR swapChains[] = { swapchain };
+    SwapchainKHR swapChains[] = {swapchain};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
 
-    presentQueue.presentKHR(presentInfo);
+    Result present;
+    try {
+        present = presentQueue.presentKHR(presentInfo);
+    } catch (const OutOfDateKHRError &error) {
+        present = Result::eErrorOutOfDateKHR;
+    }
+    if (present == Result::eErrorOutOfDateKHR || present == Result::eSuboptimalKHR) {
+        LOG_INFO("Recreate Swapchain");
+        recreateSwapchain();
+        return;
+    }
 
     frameNumber = (frameNumber + 1) % maxFramesInFlight;
 }

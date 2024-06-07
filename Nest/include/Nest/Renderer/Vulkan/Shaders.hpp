@@ -6,8 +6,6 @@
 
 using namespace vk;
 
-namespace Shaders {
-    ShaderModule createModule(const std::string &filename, const Device &logicalDevice, bool debug);
+ShaderModule createModule(const std::string &filename, const Device &logicalDevice, bool debug);
 
-    std::vector<char> readFile(const std::string &filename, bool debug);
-};
+std::vector<char> readFile(const std::string &filename, bool debug);

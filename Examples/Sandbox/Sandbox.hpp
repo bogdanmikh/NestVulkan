@@ -7,5 +7,4 @@ public:
     void start() override;
     void update(double deltaTime) override;
 private:
-
 };

@@ -17,7 +17,7 @@ Application::~Application() {
     delete window;
 }
 
-void Application::init(const GlobalSettings& globalSettings) {
+void Application::init(const GlobalSettings &globalSettings) {
     debugMode = globalSettings.debugMode;
     if (debugMode) {
         Logger::init();
@@ -54,7 +54,8 @@ void Application::init(const GlobalSettings& globalSettings) {
 }
 
 uint64_t getMillis() {
-    auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+    auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch());
     return now.count();
 }
 

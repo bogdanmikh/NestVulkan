@@ -5,15 +5,15 @@
 
 using namespace vk;
 
-namespace Commands {
-    struct CommandBufferInputChunk {
-        Device device;
-        CommandPool commandPool;
-        std::vector<Swapchain::SwapChainFrame> &frames;
-    };
+struct CommandBufferInputChunk {
+    Device device;
+    CommandPool commandPool;
+    std::vector<SwapChainFrame> &frames;
+};
 
-    CommandPool
-    makeCommandPool(const Device &device, const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
+CommandPool
+makeCommandPool(const Device &device, const PhysicalDevice &physicalDevice, const SurfaceKHR &surface, bool debug);
 
-    CommandBuffer makeCommandBuffers(const CommandBufferInputChunk &inputChunk, bool debug);
-}
+CommandBuffer makeCommandBuffer(const CommandBufferInputChunk &inputChunk);
+
+void makeFrameCommandBuffers(const CommandBufferInputChunk &inputChunk);

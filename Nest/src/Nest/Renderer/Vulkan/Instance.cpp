@@ -2,11 +2,11 @@
 
 #include "Nest/Renderer/Vulkan/Instance.hpp"
 #include "Nest/Logger/Logger.hpp"
+#include "Nest/Settings/SettingsLog.hpp"
 
-bool InstanceInit::supported(const std::vector<const char *> &needExtensions, const std::vector<const char *> &layers,
-                             bool debug) {
+bool supported(const std::vector<const char *> &needExtensions, const std::vector<const char *> &layers) {
     std::vector<ExtensionProperties> supportedExtensions = enumerateInstanceExtensionProperties();
-
+    bool debug = VK_PRINT_SUPPORT_INFO;
     if (debug) {
         // functions that Vulkan supports
         std::ostringstream message;
@@ -24,42 +24,41 @@ bool InstanceInit::supported(const std::vector<const char *> &needExtensions, co
             if (strcmp(extension, supportedExtension.extensionName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    message << "\n\tExtension \"" << static_cast<std::string>(supportedExtension.extensionName)
-                            << "\" is supported";
+                    message << "\n\tExtension \"" << extension << "\" is supported";
                 }
                 break;
             }
         }
         if (!canSupport) {
             if (debug) {
-                message << "\n\tExtension \"" << static_cast<std::string>(extension) << "\" is not supported";
+                message << "\n\tExtension \"" << extension << "\" is not supported";
+                LOG_INFO("{}", message.str());
             }
-            LOG_INFO("{}", message.str());
             return false;
         }
     }
     if (debug) {
         LOG_INFO("{}", message.str());
     }
-    message.clear();
 
+    message.str("");
     // check device can support layers
     std::vector<LayerProperties> supportedLayers = enumerateInstanceLayerProperties();
     if (debug) {
-        message << "\n\tDevice can support the following layers";
+        message << "\n\tDevice can support the following layers:";
         for (const auto &supportedLayer: supportedLayers) {
             message << "\n\t" << static_cast<std::string>(supportedLayer.layerName);
         }
         LOG_INFO("{}", message.str());
     }
-    message.str().clear();
+    message.str("");
     for (const auto &layer: layers) {
         bool canSupport = false;
         for (const auto &supportedLayer: supportedLayers) {
             if (strcmp(layer, supportedLayer.layerName) == 0) {
                 canSupport = true;
                 if (debug) {
-                    message << "\n\tExtension \"" << static_cast<std::string>(supportedLayer.layerName)
+                    message << "\n\tLayer \"" << static_cast<std::string>(supportedLayer.layerName)
                             << "\" is supported";
                 }
                 break;
@@ -67,7 +66,7 @@ bool InstanceInit::supported(const std::vector<const char *> &needExtensions, co
         }
         if (!canSupport) {
             if (debug) {
-                message << "\n\tExtension \"" << static_cast<std::string>(layer) << "\" is not supported";
+                message << "\n\tLayer \"" << static_cast<std::string>(layer) << "\" is not supported";
                 LOG_INFO("{}", message.str());
             }
             return false;
@@ -79,14 +78,15 @@ bool InstanceInit::supported(const std::vector<const char *> &needExtensions, co
     return true;
 }
 
-Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
+Instance makeInstanceVulkan(const char *appName) {
+    bool debugMode = VK_PRINT_INSTANCE_INFO;
     if (debugMode) {
         LOG_INFO("Make instance...");
     }
     uint32_t version;
     vkEnumerateInstanceVersion(&version);
     if (debugMode) {
-        LOG_INFO("System can support vulkan version: {}. {}.{}.{}",
+        LOG_INFO("System can support Vulkan version: {}.{}.{}.{}",
                  VK_API_VERSION_VARIANT(version), VK_API_VERSION_MAJOR(version), VK_API_VERSION_MINOR(version),
                  VK_API_VERSION_PATCH(version));
     }
@@ -112,9 +112,9 @@ Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
     }
     extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
-    if (debugMode) {
+    if (VK_PRINT_SUPPORT_INFO) {
         std::ostringstream message;
-        message << "Extension to be requested\n";
+        message << "Extension to be requested:\n";
 
         for (int i = 0; i < extensions.size() - 1; ++i) {
             message << "\t" << extensions[i] << "\n";
@@ -130,10 +130,7 @@ Instance InstanceInit::makeInstance(const char *appName, bool debugMode) {
     }
 
     // check can support GLFW this device for Vulkan
-    if (!InstanceInit::supported(extensions, layers, debugMode)) {
-        if (debugMode) {
-            LOG_ERROR("Device not supported need extensions");
-        }
+    if (!supported(extensions, layers)) {
         return nullptr;
     }
 

@@ -5,8 +5,6 @@
 using namespace vk;
 
 // synchronization
-namespace Sync {
-    Semaphore makeSemaphore(const Device &device, bool debug);
+Semaphore makeSemaphore(const Device &device, bool debug);
 
-    Fence makeFence(const Device &device, bool debug);
-}
+Fence makeFence(const Device &device, bool debug);
